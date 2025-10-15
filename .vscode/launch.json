@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Запуск Flask приложения",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/Backend/app.py",
+      "console": "integratedTerminal",
+      "python": "${workspaceFolder}/Backend/venv/Scripts/python.exe",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/Backend"
+      }
+    },
+    {
+      "name": "Запуск React (Frontend)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "${workspaceFolder}/Frontend/pid-frontend",
+      "console": "integratedTerminal",
+      "env": {
+        "HOST": "localhost"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Запуск всего проекта",
+      "configurations": ["Запуск Flask приложения", "Запуск React (Frontend)"]
+    }
+  ]
+}
+
