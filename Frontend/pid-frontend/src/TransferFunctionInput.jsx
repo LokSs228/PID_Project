@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 
-function TransferFunctionInput({ onResult }) {
+function TransferFunctionInput({ onResult, method, generations, populationSize, mutationRate }) {
   const [K, setK] = useState('');
   const [T_num, setTNum] = useState(['']);
   const [T_den, setTDen] = useState(['']);
   const [L, setL] = useState('');
-  const [method, setMethod] = useState('ZN');
   const [error, setError] = useState('');
 
   const [timeParams, setTimeParams] = useState({
@@ -38,7 +37,15 @@ function TransferFunctionInput({ onResult }) {
         timeParams: timeParamsArray,
         y0: parseFloat(y0),
       };
+
       if (L !== '') body.L = parseFloat(L);
+
+      // Добавляем GA-параметры только если выбран метод GA
+      if (method === 'GA') {
+        body.generations = generations;
+        body.population_size = populationSize;
+        body.mutation_rate = mutationRate;
+      }
 
       const response = await fetch('/calculate', {
         method: 'POST',
@@ -146,24 +153,10 @@ function TransferFunctionInput({ onResult }) {
         ))}
         <button type="button" onClick={() => setTDen([...T_den, ''])}>➕ Přidat Tₙ</button>
 
-        <label>
-          Metoda nastavení:
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-            style={{ marginLeft: 10 }}
-          >
-            <option value="ZN">Ziegler–Nichols</option>
-            <option value="GA">Genetic Algorithm</option>
-          </select>
-        </label>
-
         <hr style={{ margin: '20px 0' }} />
 
         <h3>Časové parametry a vstupní signály:</h3>
-        {[
-          't1', 't2', 't3', 't4', 't5', 't6', 't7', 'w1', 'w2'
-        ].map((key) => (
+        {['t1','t2','t3','t4','t5','t6','t7','w1','w2'].map((key) => (
           <div key={key}>
             <label>
               {key.toUpperCase()}:

@@ -16,6 +16,9 @@ def calculate():
     Method = data.get('Method')
     Params = data.get('timeParams', [])  
     y0 = data.get('y0')
+    generations = data.get('generations')
+    population_size = data.get ('population_size')
+    mutation_rate = data.get ('mutation_rate')
     
     if len(Params) < 9:
         return jsonify({'error': 'Not enough timeParams'}), 400
@@ -62,7 +65,7 @@ def calculate():
 
         elif Method == "GA":
             Kp_P = Kp_PI = Kp_PID = Ki_PI = Ki_PID = Kd_PID = 0.0
-            Kp_PID, Ki_PID, Kd_PID = genetic_algorithm(system, Params, y0)
+            Kp_PID, Ki_PID, Kd_PID = genetic_algorithm(system, Params, y0, generations, population_size, mutation_rate)
             sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
             pid_coeffs = {
             "P": {"Kp": Kp_P, "Ki": 0, "Kd": 0},

@@ -4,7 +4,7 @@ from scipy.signal import tf2ss, cont2discrete
 
 dt = 1  # шаг дискретизации
 
-def genetic_algorithm(system, params, y0, generations=50, population_size=10, mutation_rate=0.3):
+def genetic_algorithm(system, params, y0, generations, population_size, mutation_rate):
     def simulate_and_score(Kp, Ki, Kd):
         t1, t2, t3, t4, t5, t6, t7, w1, w2 = params
         t_values = np.arange(0, t7 + dt, dt)
