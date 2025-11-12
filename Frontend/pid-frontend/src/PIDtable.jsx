@@ -3,11 +3,16 @@ import React from 'react';
 function PidTable({ data }) {
   if (!data) return null;
 
-  const regulatorTypes = ['P', 'PI', 'PID'];
+
+  const regulatorTypes = ['P', 'PI', 'PD', 'PID'];
   const headers = ['Typ regulátoru', 'Kp', 'Ki', 'Kd'];
 
   return (
-    <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', marginTop: 20 }}>
+    <table
+      border="1"
+      cellPadding="8"
+      style={{ borderCollapse: 'collapse', marginTop: 20 }}
+    >
       <thead>
         <tr>
           {headers.map((head) => (
@@ -30,3 +35,4 @@ function PidTable({ data }) {
 }
 
 export default PidTable;
+

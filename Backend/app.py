@@ -4,6 +4,7 @@ from control import tf, step_response, pade
 from zn_method import zn_method
 from Sim import simulate
 from GA import genetic_algorithm
+
 app = Flask(__name__)
 
 @app.route('/calculate', methods=['POST'])
@@ -14,12 +15,13 @@ def calculate():
     T_den = data.get('T_den', [])
     L = data.get('L', 0)
     Method = data.get('Method')
-    Params = data.get('timeParams', [])  
+    Params = data.get('timeParams', [])
     y0 = data.get('y0')
     generations = data.get('generations')
-    population_size = data.get ('population_size')
-    mutation_rate = data.get ('mutation_rate')
-    
+    population_size = data.get('population_size')
+    mutation_rate = data.get('mutation_rate')
+    controllerType = data.get('controllerType', 'PID')  
+
     if len(Params) < 9:
         return jsonify({'error': 'Not enough timeParams'}), 400
     if K is None or not T_den:
@@ -49,7 +51,6 @@ def calculate():
         delay = tf(num_delay, den_delay)
         system *= delay
 
-    # --- Расчёт по методу ---
     points, inflection_point, tangent_line, A_L_points, pid_coeffs = [], None, None, None, None
 
     if isinstance(model_type, int):
@@ -60,18 +61,27 @@ def calculate():
                 t, y = step_response(system)
                 points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
                 return jsonify({'step_response': points, 'message': 'Too high model order for ZN method'}), 400
+
             
-            sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
+            if controllerType == "P":
+                sim_points = simulate(system, Kp_P, 0, 0, Params, y0)
+            elif controllerType == "PI":
+                sim_points = simulate(system, Kp_PI, Ki_PI, 0, Params, y0)
+            else:
+                sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
 
         elif Method == "GA":
-            Kp_P = Kp_PI = Kp_PID = Ki_PI = Ki_PID = Kd_PID = 0.0
-            Kp_PID, Ki_PID, Kd_PID = genetic_algorithm(system, Params, y0, generations, population_size, mutation_rate)
-            sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
+            # генетический алгоритм под выбранный тип
+            Kp, Ki, Kd = genetic_algorithm(system, Params, y0, generations, population_size, mutation_rate, controllerType)
+
             pid_coeffs = {
-            "P": {"Kp": Kp_P, "Ki": 0, "Kd": 0},
-            "PI": {"Kp": Kp_PI, "Ki": Ki_PI, "Kd": 0},
-            "PID": {"Kp": Kp_PID, "Ki": Ki_PID, "Kd": Kd_PID}
+                "P": {"Kp": Kp if controllerType == "P" else 0, "Ki": 0, "Kd": 0},
+                "PI": {"Kp": Kp if controllerType == "PI" else 0, "Ki": Ki if controllerType == "PI" else 0, "Kd": 0},
+                "PD": {"Kp": Kp if controllerType == "PD" else 0, "Ki": 0, "Kd": Kd if controllerType == "PD" else 0},
+                "PID": {"Kp": Kp if controllerType == "PID" else 0, "Ki": Ki if controllerType == "PID" else 0, "Kd": Kd if controllerType == "PID" else 0},
             }
+
+            sim_points = simulate(system, Kp, Ki, Kd, Params, y0)
             t, y = step_response(system)
             points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
 
@@ -90,6 +100,6 @@ def calculate():
         'y0': y0,
         'sim_points': sim_points
     })
+
 if __name__ == '__main__':
     app.run(debug=True)
-

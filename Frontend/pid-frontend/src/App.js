@@ -13,6 +13,7 @@ function App() {
   const [generations, setGenerations] = useState(50);
   const [populationSize, setPopulationSize] = useState(20);
   const [mutationRate, setMutationRate] = useState(0.1);
+  const [controllerType, setControllerType] = useState('PID');
 
 
   const handleResult = (result) => {
@@ -89,6 +90,8 @@ function App() {
        generations={generations}
        populationSize={populationSize}
        mutationRate={mutationRate}
+       controllerType={controllerType}
+       setControllerType={setControllerType}
       />
 
       {pidData && <PidTable data={pidData} />}

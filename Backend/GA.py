@@ -4,7 +4,7 @@ from scipy.signal import tf2ss, cont2discrete
 
 dt = 1  # шаг дискретизации
 
-def genetic_algorithm(system, params, y0, generations, population_size, mutation_rate):
+def genetic_algorithm(system, params, y0, generations, population_size, mutation_rate, controllerType):
     def simulate_and_score(Kp, Ki, Kd):
         t1, t2, t3, t4, t5, t6, t7, w1, w2 = params
         t_values = np.arange(0, t7 + dt, dt)
@@ -47,12 +47,20 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             derivative = (e - e_prev) / dt
             e_prev = e
 
-            u = Kp * e + Ki * integral + Kd * derivative
+            # 🔧 Учет типа контроллера
+            if controllerType == "P":
+                u = Kp * e
+            elif controllerType == "PI":
+                u = Kp * e + Ki * integral
+            elif controllerType == "PD":
+                u = Kp * e + Kd * derivative
+            else:  # PID
+                u = Kp * e + Ki * integral + Kd * derivative
+
             u = max(min(u, 1000), -1000)
 
             x = A_d @ x + B_d.flatten() * u
             y = float(C_d @ x + D_d.flatten() * u)
-
             y_array.append(y)
 
         y_array = np.array(y_array)
@@ -97,4 +105,14 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             population.append(child)
 
     best = min(population, key=lambda ind: simulate_and_score(ind['Kp'], ind['Ki'], ind['Kd']))
-    return best['Kp'], best['Ki'], best['Kd']
+
+    # 🔧 Возвращаем коэффициенты в зависимости от типа контроллера
+    if controllerType == "P":
+        return best['Kp'], 0.0, 0.0
+    elif controllerType == "PI":
+        return best['Kp'], best['Ki'], 0.0
+    elif controllerType == "PD":
+        return best['Kp'], 0.0, best['Kd']
+    else:  # PID
+        return best['Kp'], best['Ki'], best['Kd']
+
