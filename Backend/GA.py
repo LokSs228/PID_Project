@@ -2,7 +2,7 @@ import numpy as np
 import random
 from scipy.signal import tf2ss, cont2discrete
 
-dt = 1  # шаг дискретизации
+dt = 1
 
 def genetic_algorithm(system, params, y0, generations, population_size, mutation_rate, controllerType):
     def simulate_and_score(Kp, Ki, Kd):
@@ -47,14 +47,13 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             derivative = (e - e_prev) / dt
             e_prev = e
 
-            # 🔧 Учет типа контроллера
             if controllerType == "P":
                 u = Kp * e
             elif controllerType == "PI":
                 u = Kp * e + Ki * integral
             elif controllerType == "PD":
                 u = Kp * e + Kd * derivative
-            else:  # PID
+            else:  
                 u = Kp * e + Ki * integral + Kd * derivative
 
             u = max(min(u, 1000), -1000)
@@ -64,9 +63,9 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             y_array.append(y)
 
         y_array = np.array(y_array)
-        return np.sum(np.abs(w_values - y_array))
+        return np.sum((w_values - y_array)**2)
 
-    # Инициализация популяции
+    
     population = []
     for _ in range(population_size):
         individual = {
@@ -106,7 +105,6 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
 
     best = min(population, key=lambda ind: simulate_and_score(ind['Kp'], ind['Ki'], ind['Kd']))
 
-    # 🔧 Возвращаем коэффициенты в зависимости от типа контроллера
     if controllerType == "P":
         return best['Kp'], 0.0, 0.0
     elif controllerType == "PI":

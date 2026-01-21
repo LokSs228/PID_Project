@@ -4,6 +4,7 @@ from control import tf, step_response, pade
 from zn_method import zn_method
 from Sim import simulate
 from GA import genetic_algorithm
+from apro_FOPDT import apro_FOPDT 
 
 app = Flask(__name__)
 
@@ -55,23 +56,20 @@ def calculate():
 
     if isinstance(model_type, int):
         if Method == "ZN":
-            if model_type in [1, 2, 3, 4, 5]:
-                points, inflection_point, tangent_line, A_L_points, pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID = zn_method(system)
-            else:
-                t, y = step_response(system)
-                points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
-                return jsonify({'step_response': points, 'message': 'Too high model order for ZN method'}), 400
-
-            
+            inflection_point, tangent_line, A_L_points, K, T, L = apro_FOPDT (system)
+            pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = zn_method(K, T, L)
+            t, y = step_response(system)
+            points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
             if controllerType == "P":
-                sim_points = simulate(system, Kp_P, 0, 0, Params, y0)
+                 sim_points = simulate(system, Kp_P, 0, 0, Params, y0)
             elif controllerType == "PI":
-                sim_points = simulate(system, Kp_PI, Ki_PI, 0, Params, y0)
+                 sim_points = simulate(system, Kp_PI, Ki_PI, 0, Params, y0)
+            elif controllerType == "PD":    
+                sim_points = simulate(system, Kp_PD, 0, Kd_PD, Params, y0) 
             else:
-                sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
+                 sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
 
         elif Method == "GA":
-            # генетический алгоритм под выбранный тип
             Kp, Ki, Kd = genetic_algorithm(system, Params, y0, generations, population_size, mutation_rate, controllerType)
 
             pid_coeffs = {
@@ -84,6 +82,7 @@ def calculate():
             sim_points = simulate(system, Kp, Ki, Kd, Params, y0)
             t, y = step_response(system)
             points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
+            app.logger.info(f"K={K}, T={T}, L={L}")
 
         else:
             return jsonify({'error': f'Method "{Method}" not supported'}), 400
