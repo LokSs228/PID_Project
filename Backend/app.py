@@ -5,6 +5,8 @@ from zn_method import zn_method
 from Sim import simulate
 from GA import genetic_algorithm
 from apro_FOPDT import apro_FOPDT 
+from CHR_0 import CHR_0
+from CHR_20 import CHR_20
 
 app = Flask(__name__)
 
@@ -82,7 +84,36 @@ def calculate():
             sim_points = simulate(system, Kp, Ki, Kd, Params, y0)
             t, y = step_response(system)
             points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
-            app.logger.info(f"K={K}, T={T}, L={L}")
+
+        elif Method == "CHR_0":
+             inflection_point, tangent_line, A_L_points, K, T, L = apro_FOPDT (system)
+             pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_0(K, T, L)
+             t, y = step_response(system)
+             points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
+             if controllerType == "P":
+                 sim_points = simulate(system, Kp_P, 0, 0, Params, y0)
+             elif controllerType == "PI":
+                 sim_points = simulate(system, Kp_PI, Ki_PI, 0, Params, y0)
+             elif controllerType == "PD":    
+                sim_points = simulate(system, Kp_PD, 0, Kd_PD, Params, y0) 
+             else:
+                 sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
+
+        elif Method == "CHR_20":
+             inflection_point, tangent_line, A_L_points, K, T, L = apro_FOPDT (system)
+             pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_20(K, T, L)
+             t, y = step_response(system)
+             points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
+             if controllerType == "P":
+                 sim_points = simulate(system, Kp_P, 0, 0, Params, y0)
+             elif controllerType == "PI":
+                 sim_points = simulate(system, Kp_PI, Ki_PI, 0, Params, y0)
+             elif controllerType == "PD":    
+                sim_points = simulate(system, Kp_PD, 0, Kd_PD, Params, y0) 
+             else:
+                 sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)         
+
+
 
         else:
             return jsonify({'error': f'Method "{Method}" not supported'}), 400

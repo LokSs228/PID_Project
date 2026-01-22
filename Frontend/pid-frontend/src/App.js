@@ -43,6 +43,8 @@ function App() {
           >
             <option value="ZN">Ziegler–Nichols</option>
             <option value="GA">Genetic Algorithm</option>
+            <option value="CHR_0">CHR (0 % overshoot)</option>
+            <option value="CHR_20">CHR (20 % overshoot)</option>
           </select>
         </label>
       </div>
