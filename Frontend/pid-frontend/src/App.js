@@ -14,6 +14,7 @@ function App() {
   const [populationSize, setPopulationSize] = useState(20);
   const [mutationRate, setMutationRate] = useState(0.1);
   const [controllerType, setControllerType] = useState('PID');
+  const [lambdaAlpha, setLambdaAlpha] = useState(2.0);
 
 
   const handleResult = (result) => {
@@ -45,6 +46,7 @@ function App() {
             <option value="GA">Genetic Algorithm</option>
             <option value="CHR_0">CHR (0 % overshoot)</option>
             <option value="CHR_20">CHR (20 % overshoot)</option>
+            <option value="IMC">IMC / Lambda</option>
           </select>
         </label>
       </div>
@@ -82,6 +84,30 @@ function App() {
       />
     </label>
   </div>
+  
+)
+}
+{method === 'IMC' && (
+  <div style={{ marginBottom: 20 }}>
+    <h3>Parametr λ (IMC / Lambda):</h3>
+
+    <label>
+      λ = α · L, α =
+      <input
+        type="number"
+        step="0.1"
+        min="0.5"
+        max="5"
+        value={lambdaAlpha}
+        onChange={(e) => setLambdaAlpha(parseFloat(e.target.value))}
+        style={{ marginLeft: 10, width: 80 }}
+      />
+    </label>
+
+    <p style={{ fontSize: 12, color: '#666' }}>
+      Menší α → rychlejší odezva, větší α → vyšší robustnost
+    </p>
+  </div>
 )}
  
 
@@ -94,6 +120,7 @@ function App() {
        mutationRate={mutationRate}
        controllerType={controllerType}
        setControllerType={setControllerType}
+       lambdaAlpha={lambdaAlpha}
       />
 
       {pidData && <PidTable data={pidData} />}

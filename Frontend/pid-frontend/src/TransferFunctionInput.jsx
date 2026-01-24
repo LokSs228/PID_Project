@@ -10,6 +10,7 @@ function TransferFunctionInput({
   mutationRate,
   controllerType,
   setControllerType,
+  lambdaAlpha,
 }) {
   const [K, setK] = React.useState('');
   const [T_num, setTNum] = React.useState(['']);
@@ -37,13 +38,14 @@ function TransferFunctionInput({
       const timeParamsArray = Object.values(timeParams).map(parseFloat);
 
 const body = {
-  controllerType: controllerType, // ✅ правильное имя ключа
+  controllerType: controllerType, 
   K: parseFloat(K),
   T_num: numericTNum,
   T_den: numericTDen,
   Method: method,
   timeParams: timeParamsArray,
   y0: parseFloat(y0),
+  lambdaAlpha: lambdaAlpha, 
 };
 
 

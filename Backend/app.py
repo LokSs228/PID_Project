@@ -7,6 +7,7 @@ from GA import genetic_algorithm
 from apro_FOPDT import apro_FOPDT 
 from CHR_0 import CHR_0
 from CHR_20 import CHR_20
+from IMC import IMC
 
 app = Flask(__name__)
 
@@ -23,8 +24,9 @@ def calculate():
     generations = data.get('generations')
     population_size = data.get('population_size')
     mutation_rate = data.get('mutation_rate')
-    controllerType = data.get('controllerType', 'PID')  
-
+    controllerType = data.get('controllerType', 'PID') 
+    alpha = data.get('lambdaAlpha', 2) 
+    alpha = float(alpha)
     if len(Params) < 9:
         return jsonify({'error': 'Not enough timeParams'}), 400
     if K is None or not T_den:
@@ -55,6 +57,8 @@ def calculate():
         system *= delay
 
     points, inflection_point, tangent_line, A_L_points, pid_coeffs = [], None, None, None, None
+    app.logger.info(f"alpha={alpha}, Method={Method}")
+
 
     if isinstance(model_type, int):
         if Method == "ZN":
@@ -111,7 +115,20 @@ def calculate():
              elif controllerType == "PD":    
                 sim_points = simulate(system, Kp_PD, 0, Kd_PD, Params, y0) 
              else:
-                 sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)         
+                 sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)
+        elif Method == "IMC":
+             inflection_point, tangent_line, A_L_points, K, T, L = apro_FOPDT (system)
+             pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = IMC(K, T, L, alpha)
+             t, y = step_response(system)
+             points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t, y)]
+             if controllerType == "P":
+                 sim_points = simulate(system, Kp_P, 0, 0, Params, y0)
+             elif controllerType == "PI":
+                 sim_points = simulate(system, Kp_PI, Ki_PI, 0, Params, y0)
+             elif controllerType == "PD":    
+                sim_points = simulate(system, Kp_PD, 0, Kd_PD, Params, y0) 
+             else:
+                 sim_points = simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0)                     
 
 
 
