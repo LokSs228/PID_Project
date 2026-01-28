@@ -57,7 +57,7 @@ def calculate():
         system *= delay
 
     points, inflection_point, tangent_line, A_L_points, pid_coeffs = [], None, None, None, None
-    app.logger.info(f"alpha={alpha}, Method={Method}")
+    
 
 
     if isinstance(model_type, int):

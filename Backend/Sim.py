@@ -2,12 +2,17 @@ import numpy as np
 from control.matlab import lsim
 from scipy.signal import cont2discrete, tf2ss
 
-def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0, dt=0.2):
+def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     Kp = Kp_PID
     Ki = Ki_PID
     Kd = Kd_PID
-
+    step_t=[]
+    step_y=[]
+    step_w=[]
+    step_e=[]
     t1, t2, t3, t4, t5, t6, t7, w1, w2 = Params
+
+    dt = t7/ 1500
 
     t_values = np.arange(0, t7 + dt, dt)
     w_values = np.zeros_like(t_values)
@@ -62,7 +67,11 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0, dt=0.2):
 
         y_array.append(y)
         u_array.append(u)
-
+        if t1 <= t <= t2:
+            step_t.append(t)
+            step_y.append(y)
+            step_w.append(w)
+            step_e.append(e)
     sim_points = [
         {
             't': round(float(t), 4),
@@ -73,8 +82,12 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0, dt=0.2):
         for i, t in enumerate(t_values)
     ]
 
-    return sim_points
-
-
-
-
+    return {
+        "sim_points": sim_points,
+        "step": {
+            "t": step_t,
+            "y": step_y,
+            "w": step_w,
+            "e": step_e
+        }
+    }    
