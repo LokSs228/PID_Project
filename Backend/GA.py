@@ -103,13 +103,21 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             population.append(child)
 
     best = min(population, key=lambda ind: simulate_and_score(ind['Kp'], ind['Ki'], ind['Kd']))
-
+    Kp_P, Kp_PI, Ki_PI, Kp_PID, Ki_PID, Kd_PID, Kp_PD, Kd_PD = 0, 0, 0, 0, 0, 0, 0, 0
     if controllerType == "P":
-        return best['Kp'], 0.0, 0.0
+        Kp_P = best['Kp']
+        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
     elif controllerType == "PI":
-        return best['Kp'], best['Ki'], 0.0
+        Kp_PI = best['Kp']
+        Ki_PI = best['Ki']
+        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
     elif controllerType == "PD":
-        return best['Kp'], 0.0, best['Kd']
-    else:  # PID
-        return best['Kp'], best['Ki'], best['Kd']
+        Kp_PD = best['Kp']
+        Kd_PD = best['Kd']
+        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
+    else:  
+        Kp_PID = best['Kp']
+        Ki_PID = best['Ki']
+        Kd_PID = best['Kd']
+        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
 

@@ -51,6 +51,7 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     u_array = [0.0]
 
     for i in range(1, len(t_values)):
+        t = t_values[i]
         w = w_values[i]
         e = w - y
         integral += e * dt

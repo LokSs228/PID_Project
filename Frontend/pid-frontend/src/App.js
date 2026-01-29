@@ -3,6 +3,7 @@ import TransferFunctionInput from './TransferFunctionInput';
 import PidTable from './PIDtable';
 import Step from './Step';
 import Sim from './Sim';
+import MetricsTable from './MetricsTable';
 
 function App() {
   const [pidData, setPidData] = useState(null);
@@ -15,9 +16,10 @@ function App() {
   const [mutationRate, setMutationRate] = useState(0.1);
   const [controllerType, setControllerType] = useState('PID');
   const [lambdaAlpha, setLambdaAlpha] = useState(2.0);
+  const [metrics, setMetrics] = useState(null);
 
 
-  const handleResult = (result) => {
+const handleResult = (result) => {
     setPidData(result.pid);
     setStepPoints({
       points: result.step_response,
@@ -27,6 +29,16 @@ function App() {
     });
     setSimParams(result.sim_points);
     setY0(result.y0);
+    if (result.overshoot !== undefined) {
+      setMetrics({
+        overshoot: result.overshoot,
+        settlingTime: result.settlingtime,
+        IAE: result.IAE,
+        ITAE: result.ITAE
+      });
+    } else {
+      setMetrics(null);
+    }
   };
 
   return (
@@ -130,6 +142,7 @@ function App() {
       <h2>Nastavení požadované hodnoty</h2>
 
       {sim_points && y0 !== null && <Sim sim_points={sim_points} y0={y0} />}
+      {metrics && <MetricsTable metrics={metrics} />}  
     </div>
   );
 }
