@@ -106,18 +106,21 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
     Kp_P, Kp_PI, Ki_PI, Kp_PID, Ki_PID, Kd_PID, Kp_PD, Kd_PD = 0, 0, 0, 0, 0, 0, 0, 0
     if controllerType == "P":
         Kp_P = best['Kp']
-        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
     elif controllerType == "PI":
         Kp_PI = best['Kp']
         Ki_PI = best['Ki']
-        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
     elif controllerType == "PD":
         Kp_PD = best['Kp']
         Kd_PD = best['Kd']
-        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
     else:  
         Kp_PID = best['Kp']
         Ki_PID = best['Ki']
         Kd_PID = best['Kd']
-        return Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
+    pid_coeffs ={
+        'P':   {'Kp': Kp_P,  'Ki': None,   'Kd': None},
+        'PI':  {'Kp': Kp_PI, 'Ki': Ki_PI,  'Kd': None},
+        'PD':  {'Kp': Kp_PD, 'Ki': None,   'Kd': Kd_PD},
+        'PID': {'Kp': Kp_PID,'Ki': Ki_PID, 'Kd': Kd_PID},
+    } 
+    return pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD        
 

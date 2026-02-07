@@ -102,9 +102,3 @@ function Step({ points }) {
 }
 
 export default Step;
-
-
-
-
-
-

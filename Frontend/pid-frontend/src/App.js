@@ -148,8 +148,3 @@ const handleResult = (result) => {
 }
 
 export default App;
-
-
-
-
-
