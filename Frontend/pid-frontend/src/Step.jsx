@@ -7,10 +7,11 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler // Добавили для мягкой заливки
 } from 'chart.js';
 
-ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 function Step({ points }) {
   const pointArray = points.points;
@@ -20,85 +21,121 @@ function Step({ points }) {
 
   if (!pointArray || pointArray.length === 0) return null;
 
-  // Рассчитаем касательную линию
+  // Рассчитаем данные для отрисовки касательной (линия через весь график)
   let tangentData = [];
   if (inflection && tangent) {
     const tMax = pointArray[pointArray.length - 1].t;
-    const tMin = Math.max(inflection.t - 0.2 * tMax, 0);
-    const tMaxExt = inflection.t + 0.2 * tMax;
+    const tMin = 0;
+    const tEnd = inflection.t + (tMax - inflection.t) * 0.5;
 
     const yMin = tangent.slope * (tMin - inflection.t) + inflection.y;
-    const yMax = tangent.slope * (tMaxExt - inflection.t) + inflection.y;
+    const yMax = tangent.slope * (tEnd - inflection.t) + inflection.y;
 
     tangentData = [
       { x: tMin, y: yMin },
-      { x: tMaxExt, y: yMax }
+      { x: tEnd, y: yMax }
     ];
   }
 
   const data = {
     datasets: [
       {
-        label: 'Přechodová charakteristika y(t)',
+        label: 'Odezva y(t)',
         data: pointArray.map(p => ({ x: p.t, y: p.y })),
-        borderColor: 'blue',
-        backgroundColor: 'lightblue',
-        fill: false,
-        tension: 0.3,
+        borderColor: '#3b82f6', // blue-500
+        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+        fill: true,
+        tension: 0.2,
         pointRadius: 0,
+        borderWidth: 3,
+      },
+      tangentData.length > 0 && {
+        label: 'Inflexní tečna',
+        data: tangentData,
+        borderColor: 'rgba(239, 68, 68, 0.5)', // red-500 прозрачный
+        borderWidth: 1.5,
+        borderDash: [5, 5],
+        fill: false,
+        pointRadius: 0,
+        tension: 0,
       },
       inflection && {
         label: 'Inflexní bod',
         data: [{ x: inflection.t, y: inflection.y }],
-        pointRadius: 6,
-        pointBackgroundColor: 'red',
-        pointBorderColor: 'darkred',
+        pointRadius: 5,
+        pointBackgroundColor: '#ef4444',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
         showLine: false,
-        parsing: false,
       },
       A_L && {
-        label: 'A (průsečík s osou Y)',
+        label: 'Bod A (y-axis)',
         data: [{ x: 0, y: A_L.A }],
-        pointRadius: 6,
-        pointBackgroundColor: 'green',
-        pointBorderColor: 'darkgreen',
+        pointRadius: 5,
+        pointBackgroundColor: '#10b981', // emerald-500
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
         showLine: false,
-        parsing: false,
       },
       A_L && {
-        label: 'L (průsečík s osou X)',
+        label: 'Bod L (dopravní zpoždění)',
         data: [{ x: A_L.L, y: 0 }],
-        pointRadius: 6,
-        pointBackgroundColor: 'orange',
-        pointBorderColor: 'darkorange',
+        pointRadius: 5,
+        pointBackgroundColor: '#f59e0b', // amber-500
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
         showLine: false,
-        parsing: false,
-    },
-      tangentData.length > 0 && {
-        label: 'Tečna',
-        data: tangentData,
-        borderColor: 'red',
-        borderWidth: 2,
-        fill: false,
-        pointRadius: 0,
-        tension: 0,
-      }
+      },
     ].filter(Boolean),
   };
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'nearest',
+      intersect: false,
+    },
     plugins: {
-      legend: { position: 'top' },
-      title: { display: true, text: 'Přechodová charakteristika' },
+      legend: {
+        position: 'top',
+        labels: {
+          color: '#94a3b8', // slate-400
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 20,
+          font: { size: 11, weight: '600' }
+        },
+      },
+      title: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#f8fafc',
+        bodyColor: '#cbd5e1',
+        borderColor: '#334155',
+        borderWidth: 1,
+      }
     },
     scales: {
-      x: { type: 'linear', title: { display: true, text: 'Čas, s' } },
-      y: { title: { display: true, text: 'Výstup y(t)' } },
+      x: {
+        type: 'linear',
+        title: { display: true, text: 'Čas [s]', color: '#64748b', font: { size: 11, weight: 'bold' } },
+        grid: { color: '#1e293b', drawBorder: false },
+        ticks: { color: '#64748b' },
+      },
+      y: {
+        title: { display: true, text: 'Amplituda y(t)', color: '#64748b', font: { size: 11, weight: 'bold' } },
+        grid: { color: '#1e293b', drawBorder: false },
+        ticks: { color: '#64748b' },
+      },
     },
   };
 
-  return <Line data={data} options={options} />;
+  return (
+    <div className="w-full h-full min-h-[350px]">
+      <Line data={data} options={options} />
+    </div>
+  );
 }
 
 export default Step;

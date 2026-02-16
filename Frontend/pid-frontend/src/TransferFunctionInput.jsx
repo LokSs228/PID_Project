@@ -3,14 +3,7 @@ import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 
 function TransferFunctionInput({
-  onResult,
-  method,
-  generations,
-  populationSize,
-  mutationRate,
-  controllerType,
-  setControllerType,
-  lambdaAlpha,
+  onResult, method, generations, populationSize, mutationRate, controllerType, lambdaAlpha
 }) {
   const [K, setK] = React.useState('');
   const [T_num, setTNum] = React.useState(['']);
@@ -23,6 +16,9 @@ function TransferFunctionInput({
   });
   const [y0, setY0] = React.useState(70);
 
+  const inputStyle = "w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all";
+  const labelStyle = "block text-[10px] font-bold text-slate-500 uppercase mb-1 ml-1";
+
   const handleTimeParamChange = (e) => {
     const { name, value } = e.target;
     setTimeParams((prev) => ({ ...prev, [name]: value }));
@@ -31,171 +27,143 @@ function TransferFunctionInput({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     try {
-      const numericTNum = T_num.map(val => parseFloat(val)).filter(val => !isNaN(val));
-      const numericTDen = T_den.map(val => parseFloat(val)).filter(val => !isNaN(val));
-      const timeParamsArray = Object.values(timeParams).map(parseFloat);
-
-const body = {
-  controllerType: controllerType, 
-  K: parseFloat(K),
-  T_num: numericTNum,
-  T_den: numericTDen,
-  Method: method,
-  timeParams: timeParamsArray,
-  y0: parseFloat(y0),
-  lambdaAlpha: lambdaAlpha, 
-};
-
-
+      const body = {
+        controllerType,
+        K: parseFloat(K),
+        T_num: T_num.map(val => parseFloat(val)).filter(val => !isNaN(val)),
+        T_den: T_den.map(val => parseFloat(val)).filter(val => !isNaN(val)),
+        Method: method,
+        timeParams: Object.values(timeParams).map(parseFloat),
+        y0: parseFloat(y0),
+        lambdaAlpha,
+      };
       if (L !== '') body.L = parseFloat(L);
       if (method === 'GA') {
         body.generations = generations;
         body.population_size = populationSize;
         body.mutation_rate = mutationRate;
       }
-
       const response = await fetch('/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Chyba při odesílání požadavku');
+      if (!response.ok) throw new Error(data.error || 'Chyba serveru');
       onResult(data);
-    } catch (err) {
-      setError(err.message);
-    }
+    } catch (err) { setError(err.message); }
   };
 
   const renderLatex = () => {
-    if (K === '' || T_den.length === 0 || T_den.some((t) => t === '')) {
-      return 'Přenosová funkce bude zobrazena zde';
-    }
-    const numerator = T_num.filter((val) => val !== '').map((val) => `(${val}s + 1)`).join('\\cdot ');
-    const denominator = T_den.filter((val) => val !== '').map((val) => `(${val}s + 1)`).join('\\cdot ');
-    const delayPart = L !== '' ? `\\cdot e^{- ${L}s}` : '';
-    return `\\frac{${K}${numerator ? '\\cdot ' + numerator : ''}}{${denominator}}${delayPart}`;
+    if (K === '' || T_den.some(t => t === '')) return '\\text{G(s) = ...}';
+    const num = T_num.filter(v => v !== '').map(v => `(${v}s + 1)`).join('\\cdot ');
+    const den = T_den.filter(v => v !== '').map(v => `(${v}s + 1)`).join('\\cdot ');
+    const delay = L !== '' ? `\\cdot e^{- ${L}s}` : '';
+    return `G(s) = \\frac{${K}${num ? '\\cdot ' + num : ''}}{${den}}${delay}`;
   };
 
   return (
-    <div>
-      <h2>Zadejte parametry přenosové funkce:</h2>
-      <form onSubmit={handleSubmit}>
-        {/* ✅ Выбор типа регулятора — теперь из родителя */}
-        <label>
-          Typ regulátoru:
-          <select value={controllerType} onChange={(e) => setControllerType(e.target.value)}>
-            <option value="PID">PID</option>
-            <option value="PI">PI</option>
-            <option value="PD">PD</option>
-            <option value="P">P</option>
-          </select>
-        </label>
-
-        <br /><br />
-
-        <label>
-          K:
-          <input type="number" step="any" value={K} onChange={(e) => setK(e.target.value)} required />
-        </label>
-
-        <label>
-          {' '}L (zpoždění):
-          <input type="number" step="any" value={L} onChange={(e) => setL(e.target.value)} />
-        </label>
-
-        <h4>Čitatel (Tₙ):</h4>
-        {T_num.map((value, index) => (
-          <div key={index}>
-            <input
-              type="number"
-              step="any"
-              value={value}
-              onChange={(e) => {
-                const newT = [...T_num];
-                newT[index] = e.target.value;
-                setTNum(newT);
-              }}
-              placeholder={`Tnum${index + 1}`}
-            />
-            {T_num.length > 1 && (
-              <button type="button" onClick={() => setTNum(T_num.filter((_, i) => i !== index))}>
-                ❌
-              </button>
-            )}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Левая часть: Коэффициенты */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelStyle}>Zesílení (K)</label>
+              <input type="number" step="any" value={K} onChange={e => setK(e.target.value)} className={inputStyle} required />
+            </div>
+            <div>
+              <label className={labelStyle}>Dopravní zpoždění (L)</label>
+              <input type="number" step="any" value={L} onChange={e => setL(e.target.value)} className={inputStyle} />
+            </div>
           </div>
-        ))}
-        <button type="button" onClick={() => setTNum([...T_num, ''])}>➕ Přidat Tₙ</button>
 
-        <h4>Jmenovatel (T_d):</h4>
-        {T_den.map((value, index) => (
-          <div key={index}>
-            <input
-              type="number"
-              step="any"
-              value={value}
-              onChange={(e) => {
-                const newT = [...T_den];
-                newT[index] = e.target.value;
-                setTDen(newT);
-              }}
-              placeholder={`Tden${index + 1}`}
-            />
-            {T_den.length > 1 && (
-              <button type="button" onClick={() => setTDen(T_den.filter((_, i) => i !== index))}>
-                ❌
-              </button>
-            )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className={labelStyle}>Čitatel (Tₙ)</label>
+              {T_num.map((v, i) => (
+                <div key={i} className="flex gap-2">
+                  <input type="number" step="any" value={v} onChange={e => {
+                    const n = [...T_num]; n[i] = e.target.value; setTNum(n);
+                  }} className={inputStyle} />
+                  {T_num.length > 1 && <button type="button" onClick={() => setTNum(T_num.filter((_, idx) => idx !== i))} className="text-slate-500 hover:text-red-400">✕</button>}
+                </div>
+              ))}
+              <button type="button" onClick={() => setTNum([...T_num, ''])} className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-tighter">+ Přidat člen</button>
+            </div>
+            <div className="space-y-2">
+              <label className={labelStyle}>Jmenovatel (T_d)</label>
+              {T_den.map((v, i) => (
+                <div key={i} className="flex gap-2">
+                  <input type="number" step="any" value={v} onChange={e => {
+                    const n = [...T_den]; n[i] = e.target.value; setTDen(n);
+                  }} className={inputStyle} />
+                  {T_den.length > 1 && <button type="button" onClick={() => setTDen(T_den.filter((_, idx) => idx !== i))} className="text-slate-500 hover:text-red-400">✕</button>}
+                </div>
+              ))}
+              <button type="button" onClick={() => setTDen([...T_den, ''])} className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-tighter">+ Přidat člen</button>
+            </div>
           </div>
-        ))}
-        <button type="button" onClick={() => setTDen([...T_den, ''])}>➕ Přidat T_d</button>
-
-        <hr style={{ margin: '20px 0' }} />
-
-        <h3>Časové parametry a vstupní signály:</h3>
-        {['t1','t2','t3','t4','t5','t6','t7','w1','w2'].map((key) => (
-          <div key={key}>
-            <label>
-              {key.toUpperCase()}:
-              <input
-                type="number"
-                step="any"
-                name={key}
-                value={timeParams[key]}
-                onChange={handleTimeParamChange}
-                required
-              />
-            </label>
-          </div>
-        ))}
-
-        <div>
-          <label>
-            Y₀ (počáteční hodnota):
-            <input
-              type="number"
-              step="any"
-              name="y0"
-              value={y0}
-              onChange={(e) => setY0(parseFloat(e.target.value))}
-            />
-          </label>
         </div>
 
-        <br />
-        <button type="submit">Vypočítat</button>
-      </form>
-
-      <div style={{ marginTop: 20 }}>
-        <h3>Přenosová funkce:</h3>
-        <BlockMath math={renderLatex()} />
+{/* ПРАВАЯ ЧАСТЬ: Вставляем новый блок с подсказкой здесь */}
+        <div className="bg-slate-900/30 p-4 rounded-xl border border-slate-700/30 relative group/info">
+          <div className="flex items-center gap-2 mb-2">
+            <label className={labelStyle}>Simulační scénář (t, w, y₀)</label>
+            
+            {/* Иконка "i" */}
+            <div className="relative group cursor-help">
+              <div className="w-4 h-4 rounded-full border border-slate-500 text-slate-500 flex items-center justify-center text-[10px] font-bold hover:border-blue-400 hover:text-blue-400 transition-colors">
+                i
+              </div>
+              
+              {/* Тултип */}
+              <div className="absolute z-50 left-0 top-6 w-72 p-4 bg-slate-800 border border-slate-700 shadow-2xl rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <h4 className="text-blue-400 font-bold text-xs uppercase mb-2 text-left">Informace o simulaci</h4>
+                <div className="text-[11px] text-slate-300 space-y-2 leading-relaxed text-left">
+                  <p>
+                    Simulace testuje robustnost regulátoru pomocí řady změn: 
+                    <span className="text-white"> skok nahoru/dolů</span>, následovaný 
+                    <span className="text-white"> rampou nahoru/dolů</span>.
+                  </p>
+                  <p>
+                    <strong className="text-emerald-400">t1 – t7:</strong> Časové body, ve kterých dochází ke změně požadované hodnoty.
+                  </p>
+                  <p>
+                    <strong className="text-emerald-400">w1, w2:</strong> Amplitudy požadovaných hodnot (setpointů).
+                  </p>
+                  <p className="pt-2 border-t border-slate-700 text-amber-400 font-medium italic">
+                    Důležité: Výpočet metrik (IAE, ITAE, překmit) se provádí na základě odezvy na první skok v čase t1.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-5 gap-2 mt-2">
+            {['t1','t2','t3','t4','t5','t6','t7','w1','w2'].map(k => (
+              <div key={k}>
+                <input type="number" name={k} value={timeParams[k]} onChange={handleTimeParamChange} className="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-center" />
+                <div className="text-[8px] text-slate-600 text-center uppercase mt-0.5">{k}</div>
+              </div>
+            ))}
+            <div>
+              <input type="number" value={y0} onChange={e => setY0(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-[11px] text-center text-emerald-400" />
+              <div className="text-[8px] text-slate-600 text-center uppercase mt-0.5">y0</div>
+            </div>
+          </div>
+          <div className="mt-6 p-4 bg-slate-950/50 rounded-lg text-blue-100 flex justify-center">
+            <BlockMath math={renderLatex()} />
+          </div>
+        </div>
       </div>
 
-      {error && <p style={{ color: 'red' }}>Chyba: {error}</p>}
-    </div>
+      <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all uppercase tracking-[0.2em] text-sm">
+        Analyzovat a vypočítat
+      </button>
+      {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+    </form>
   );
 }
 

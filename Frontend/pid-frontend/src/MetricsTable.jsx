@@ -19,26 +19,26 @@ function MetricsTable({ metrics }) {
         </thead>
         <tbody>
           <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>Overshoot (%)</td>
+            <td style={{ border: '1px solid #ccc', padding: 8 }}>Overshoot [%]</td>
             {/* Можно добавить .toFixed(2) для красивого отображения чисел */}
             <td style={{ border: '1px solid #ccc', padding: 8 }}>
               {overshoot !== undefined ? Number(overshoot).toFixed(2) : '-'}
             </td>
           </tr>
           <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>Settling Time</td>
+            <td style={{ border: '1px solid #ccc', padding: 8 }}>Settling Time [s]</td>
             <td style={{ border: '1px solid #ccc', padding: 8 }}>
               {settlingTime !== undefined ? Number(settlingTime).toFixed(4) : '-'}
             </td>
           </tr>
           <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>IAE</td>
+            <td style={{ border: '1px solid #ccc', padding: 8 }}>IAE [s]</td>
             <td style={{ border: '1px solid #ccc', padding: 8 }}>
               {IAE !== undefined ? Number(IAE).toFixed(4) : '-'}
             </td>
           </tr>
           <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>ITAE</td>
+            <td style={{ border: '1px solid #ccc', padding: 8 }}>ITAE [s²]</td>
             <td style={{ border: '1px solid #ccc', padding: 8 }}>
               {ITAE !== undefined ? Number(ITAE).toFixed(4) : '-'}
             </td>

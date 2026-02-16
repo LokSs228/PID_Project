@@ -12,31 +12,26 @@ from IMC import IMC
 app = Flask(__name__)
 
 def select_pid(controllerType, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD):
-    """
-    Выбирает коэффициенты в зависимости от типа контроллера.
-    """
     if controllerType == "P":
         return Kp_P, 0, 0
     elif controllerType == "PI":
         return Kp_PI, Ki_PI, 0
     elif controllerType == "PD":
         return Kp_PD, 0, Kd_PD
-    else: # PID
+    else: 
         return Kp_PID, Ki_PID, Kd_PID
 
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
     data = request.json
-
-    # --- 1. Извлечение и валидация данных ---
     K_in = data.get('K')
     T_num = data.get('T_num', [])
     T_den = data.get('T_den', [])
     L_in = data.get('L', 0)
     Method = data.get('Method')
     Params = data.get('timeParams', [])
-    y0 = data.get('y0', 0) # Добавил дефолтное значение 0
+    y0 = data.get('y0', 0)
 
     generations = data.get('generations')
     population_size = data.get('population_size')
@@ -64,18 +59,13 @@ def calculate():
         return jsonify({'error': 'Некорректные числовые значения'}), 400
 
     model_type = len(T_den_vals)
-
-    # --- 2. Создание передаточной функции ---
     num = [1]
-    # Используем другое имя переменной (ti), чтобы не засорять T
     for ti in T_num_vals:
         num = np.polymul(num, [ti, 1])
-
     den = [1]
     for ti in T_den_vals:
         den = np.polymul(den, [ti, 1])
 
-    # Базовая система без задержки
     base_system = tf([K_val], [1]) * tf(num, den)
     system = base_system
 
