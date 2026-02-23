@@ -44,7 +44,7 @@ def calculate():
     except (TypeError, ValueError):
         alpha = 2.0
 
-    if len(Params) < 9:
+    if len(Params) < 11:
         return jsonify({'error': 'Not enough timeParams'}), 400
 
     if K_in is None or not T_den:

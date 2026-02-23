@@ -4,7 +4,9 @@ from scipy.signal import tf2ss, cont2discrete
 
 def genetic_algorithm(system, params, y0, generations, population_size, mutation_rate, controllerType):
     def simulate_and_score(Kp, Ki, Kd):
-        t1, t2, t3, t4, t5, t6, t7, w1, w2 = params
+        t1, t2, t3, t4, t5, t6, t7, w1, w2 = params[:9]
+        disturbance_time = params[9] if len(params) > 9 else np.inf
+        disturbance_value = params[10] if len(params) > 10 else 0.0
         dt = t7 / 1500
         t_values = np.arange(0, t7 + dt, dt)
         w_values = np.zeros_like(t_values)
@@ -55,7 +57,8 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             else:  
                 u = Kp * e + Ki * integral + Kd * derivative
 
-            u = max(min(u, 1000), -1000)
+            disturbance = disturbance_value if t_values[i] >= disturbance_time else 0.0
+            u = max(min(u + disturbance, 1000), -1000)
 
             x = A_d @ x + B_d.flatten() * u
             y = float(C_d @ x + D_d.flatten() * u)
