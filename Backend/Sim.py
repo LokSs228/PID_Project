@@ -3,7 +3,9 @@ from scipy.signal import cont2discrete, tf2ss
 
 def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     Kp, Ki, Kd = Kp_PID, Ki_PID, Kd_PID
-    t1, t2, t3, t4, t5, t6, t7, w1, w2 = Params
+    t1, t2, t3, t4, t5, t6, t7, w1, w2 = Params[:9]
+    disturbance_time = Params[9] if len(Params) > 9 else np.inf
+    disturbance_value = Params[10] if len(Params) > 10 else 0.0
 
     dt = t7 / 1500
     t_values = np.arange(0, t7 + dt, dt)
@@ -42,7 +44,9 @@ def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
         # PID логика
         integral = np.clip(integral + e * dt, -1e5, 1e5)
         derivative = -(y - y_prev) / dt
-        u = np.clip(Kp * e + Ki * integral + Kd * derivative, -1000, 1000)
+        u_pid = np.clip(Kp * e + Ki * integral + Kd * derivative, -1000, 1000)
+        disturbance = disturbance_value if t >= disturbance_time else 0.0
+        u = np.clip(u_pid + disturbance, -1000, 1000)
 
         # Сохранение данных
         sim_points.append({'t': round(float(t), 4), 'w': float(w), 'y': float(y), 'u': float(u)})

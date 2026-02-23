@@ -12,7 +12,7 @@ function TransferFunctionInput({
   const [error, setError] = React.useState('');
   const [timeParams, setTimeParams] = React.useState({
     t1: 460, t2: 860, t3: 1260, t4: 1660, t5: 2060, t6: 2460, t7: 2500,
-    w1: 150, w2: 170,
+    w1: 150, w2: 170, td: 1200, d: 0,
   });
   const [y0, setY0] = React.useState(70);
 
@@ -133,6 +133,9 @@ function TransferFunctionInput({
                   <p>
                     <strong className="text-emerald-400">w1, w2:</strong> Amplitudy požadovaných hodnot (setpointů).
                   </p>
+                  <p>
+                    <strong className="text-emerald-400">td, d:</strong> čas přidání poruchy a její velikost (přičítá se k akční veličině u).
+                  </p>
                   <p className="pt-2 border-t border-slate-700 text-amber-400 font-medium italic">
                     Důležité: Výpočet metrik (IAE, ITAE, překmit) se provádí na základě odezvy na první skok v čase t1.
                   </p>
@@ -142,7 +145,7 @@ function TransferFunctionInput({
           </div>
           
           <div className="grid grid-cols-5 gap-2 mt-2">
-            {['t1','t2','t3','t4','t5','t6','t7','w1','w2'].map(k => (
+            {['t1','t2','t3','t4','t5','t6','t7','w1','w2','td','d'].map(k => (
               <div key={k}>
                 <input type="number" name={k} value={timeParams[k]} onChange={handleTimeParamChange} className="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-center" />
                 <div className="text-[8px] text-slate-600 text-center uppercase mt-0.5">{k}</div>
