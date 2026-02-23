@@ -8,7 +8,7 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler // Добавили для мягкой заливки
+  Filler
 } from 'chart.js';
 
 ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
@@ -18,10 +18,11 @@ function Step({ points }) {
   const inflection = points.inflection;
   const tangent = points.tangent_line;
   const A_L = points.A_L_points;
+  const aproArray = points.apro_points || [];
 
   if (!pointArray || pointArray.length === 0) return null;
 
-  // Рассчитаем данные для отрисовки касательной (линия через весь график)
+  // Рассчитаем данные для отрисовки касательной
   let tangentData = [];
   if (inflection && tangent) {
     const tMax = pointArray[pointArray.length - 1].t;
@@ -39,50 +40,65 @@ function Step({ points }) {
 
   const data = {
     datasets: [
+      // 1. Главная кривая (реальная система)
       {
-        label: 'Odezva y(t)',
+        label: 'Reálná odezva y(t)',
         data: pointArray.map(p => ({ x: p.t, y: p.y })),
         borderColor: '#3b82f6', // blue-500
-        backgroundColor: 'rgba(59, 130, 246, 0.05)',
-        fill: true,
+        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+        fill: false,
         tension: 0.2,
         pointRadius: 0,
         borderWidth: 3,
       },
+      // 2. Аппроксимация FOPDT (модель)
+      aproArray.length > 0 && {
+        label: 'Aproximovaná FOPDT yₐ(t)',
+        data: aproArray.map(p => ({ x: p.t, y: p.y })),
+        borderColor: '#a855f7', // purple-500
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.2,
+        pointRadius: 0,
+        borderWidth: 2,
+        borderDash: [6, 4], // Средний пунктир
+      },
+      // 3. Вспомогательная линия (касательная)
       tangentData.length > 0 && {
         label: 'Inflexní tečna',
         data: tangentData,
-        borderColor: 'rgba(239, 68, 68, 0.5)', // red-500 прозрачный
+        borderColor: 'rgba(239, 68, 68, 0.6)', // red-500 полупрозрачный
         borderWidth: 1.5,
-        borderDash: [5, 5],
+        borderDash: [3, 3], // Мелкий пунктир
         fill: false,
         pointRadius: 0,
         tension: 0,
       },
+      // 4. Аналитические точки
       inflection && {
         label: 'Inflexní bod',
         data: [{ x: inflection.t, y: inflection.y }],
         pointRadius: 5,
-        pointBackgroundColor: '#ef4444',
-        pointBorderColor: '#fff',
+        pointBackgroundColor: '#ef4444', // red-500
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         showLine: false,
       },
       A_L && {
-        label: 'Bod A (y-axis)',
+        label: 'Bod A (osa y)',
         data: [{ x: 0, y: A_L.A }],
         pointRadius: 5,
         pointBackgroundColor: '#10b981', // emerald-500
-        pointBorderColor: '#fff',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         showLine: false,
       },
       A_L && {
-        label: 'Bod L (dopravní zpoždění)',
+        label: 'Bod L (zpoždění)',
         data: [{ x: A_L.L, y: 0 }],
         pointRadius: 5,
         pointBackgroundColor: '#f59e0b', // amber-500
-        pointBorderColor: '#fff',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         showLine: false,
       },

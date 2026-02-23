@@ -87,6 +87,8 @@ def calculate():
     
     # Переменные для аппроксимированной модели (FOPDT)
     K_fopdt, T_fopdt, L_fopdt = K_val, 0, L_val 
+    apro_FOPDT_system = None
+    apro_points = []
 
     # --- 4. Выбор метода настройки ---
     
@@ -113,40 +115,46 @@ def calculate():
         pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = IMC(K_fopdt, T_fopdt, L_fopdt, alpha)
 
     elif Method == "GA":
-        # Генетический алгоритм работает с исходной системой, а не FOPDT
-        # Важно: genetic_algorithm должен возвращать кортеж из 9 элементов, как и другие методы
         try:
             pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = genetic_algorithm(
                 system, Params, y0,
                 generations, population_size, mutation_rate, controllerType
             )
-            # Для отчета в GA T и L могут оставаться исходными или 0, так как аппроксимация не проводилась
             T_fopdt = 0 
         except Exception as e:
              return jsonify({'error': f'Ошибка Genetic Algorithm: {str(e)}'}), 500
 
     else:
         return jsonify({'error': f'Method "{Method}" not supported'}), 400
+    if T_fopdt > 0:
+        apro_FOPDT_system = tf([K_fopdt], [T_fopdt, 1])
+        if L_fopdt > 0:
+            apro_num_delay, apro_den_delay = pade(L_fopdt, 4)
+            apro_FOPDT_system *= tf(apro_num_delay, apro_den_delay)
+        try:
+            t_apro_resp, y_apro_resp = step_response(apro_FOPDT_system)
+            apro_points = [
+                {'t': float(ti), 'y': float(yi)}
+                for ti, yi in zip(t_apro_resp, y_apro_resp)
+            ]
+        except Exception:
+            apro_points = []
     # --- 5. Выбор итоговых коэффициентов и Симуляция ---
-    
     Kp, Ki, Kd = select_pid(
         controllerType,
         Kp_P, Kp_PI, Kp_PID,
         Ki_PI, Ki_PID,
         Kd_PID, Kp_PD, Kd_PD
     )
-
     try:
         # Теперь simulate возвращает словарь, содержащий и sim_points, и metrics, и step_data
         sim_results = simulate(system, Kp, Ki, Kd, Params, y0)
-        
         sim_points = sim_results["sim_points"]
         metrics = sim_results["metrics"]
         step_data = sim_results["step_data"]
         
     except Exception as e:
         return jsonify({'error': f'Ошибка симуляции: {str(e)}'}), 500
-
     # Опеределение реакции разомкнутой системы (Open Loop)
     try:
         t_resp, y_resp = step_response(system)
@@ -158,6 +166,7 @@ def calculate():
     return jsonify({
         'step_response': points,
         'inflection_point': inflection_point,
+        'apro_step_response': apro_points,
         'tangent_line': tangent_line,
         'pid': pid_coeffs,
         'A_L_points': A_L_points,

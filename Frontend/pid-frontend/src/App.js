@@ -25,6 +25,7 @@ function App() {
       inflection: result.inflection_point,
       tangent_line: result.tangent_line,
       A_L_points: result.A_L_points,
+      apro_points: result.apro_step_response || [],
     });
     setSimParams(result.sim_points);
     setY0(result.y0);
