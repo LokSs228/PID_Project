@@ -77,9 +77,6 @@ def calculate():
 
     # --- 3. Инициализация переменных для результата ---
     points = []
-    inflection_point = None
-    tangent_line = None
-    A_L_points = None
     pid_coeffs = {}
     
     # Инициализируем нулями
@@ -95,7 +92,7 @@ def calculate():
     # Если метод НЕ генетический, нам почти всегда нужна аппроксимация FOPDT
     if Method != "GA":
         try:
-            inflection_point, tangent_line, A_L_points, K_ap, T_ap, L_ap = apro_FOPDT(system)
+            K_ap, T_ap, L_ap = apro_FOPDT(system)
             # Обновляем переменные, которые пойдут в методы расчета PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
         except Exception as e:
@@ -165,11 +162,8 @@ def calculate():
     # --- 6. Формирование ответа ---
     return jsonify({
         'step_response': points,
-        'inflection_point': inflection_point,
         'apro_step_response': apro_points,
-        'tangent_line': tangent_line,
         'pid': pid_coeffs,
-        'A_L_points': A_L_points,
         'model_type': model_type,
         'y0': y0,
         'sim_points': sim_points,

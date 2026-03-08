@@ -3,7 +3,7 @@ import 'katex/dist/katex.min.css';
 import { BlockMath } from 'react-katex';
 
 function TransferFunctionInput({
-  onResult, method, generations, populationSize, mutationRate, controllerType, lambdaAlpha
+  onResult, onRequestStart, onRequestEnd, method, generations, populationSize, mutationRate, controllerType, lambdaAlpha
 }) {
   const [K, setK] = React.useState('');
   const [T_num, setTNum] = React.useState(['']);
@@ -28,6 +28,7 @@ function TransferFunctionInput({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (onRequestStart) onRequestStart();
     try {
       const body = {
         controllerType,
@@ -53,7 +54,11 @@ function TransferFunctionInput({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Chyba serveru');
       onResult(data);
-    } catch (err) { setError(err.message); }
+    } catch (err) { 
+      setError(err.message); 
+    } finally {
+      if (onRequestEnd) onRequestEnd();
+    }
   };
 
   const renderLatex = () => {
