@@ -3,12 +3,12 @@ def CHR_20 (K, T, L):
         return None
     Kp_P = 0.7 * T / (K * L)
 
-    Kp_PI = 0.7 * T / (K * L)
-    Ki_PI = Kp_PI / (2.3 * L)
+    Kp_PI = 0.6 * T / (K * L)
+    Ki_PI = Kp_PI / (T)
 
-    Kp_PID = 1.2 * T / (K * L)
-    Ki_PID = Kp_PID / (2 * L)
-    Kd_PID = Kp_PID * (0.42 * L)
+    Kp_PID = 0.95 * T / (K * L)
+    Ki_PID = Kp_PID / (1.4 * T)
+    Kd_PID = Kp_PID * (0.47 * L)
 
     Kp_PD = Kp_PID
     Kd_PD = Kp_PD * (0.42 * L)
