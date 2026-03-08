@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -8,39 +8,39 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 } from 'chart.js';
 
 ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 function Step({ points }) {
-  const pointArray = points.points;
-  const aproArray = points.apro_points || [];
+  const pointArray = points?.points || [];
+  const aproArray = points?.apro_points || [];
 
-  if (!pointArray || pointArray.length === 0) return null;
+  if (pointArray.length === 0) return null;
 
   const data = {
     datasets: [
       {
-        label: 'ReГЎlnГЎ odezva y(t)',
-        data: pointArray.map(p => ({ x: p.t, y: p.y })),
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.08)',
-        fill: false,
-        tension: 0.2,
+        label: 'Reálná odezva y(t)',
+        data: pointArray.map((p) => ({ x: p.t, y: p.y })),
+        borderColor: '#38bdf8',
+        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+        fill: true,
+        tension: 0.24,
         pointRadius: 0,
-        borderWidth: 3,
+        borderWidth: 2.5,
       },
       aproArray.length > 0 && {
-        label: 'AproximovanГЎ FOPDT yв‚ђ(t)',
-        data: aproArray.map(p => ({ x: p.t, y: p.y })),
-        borderColor: '#a855f7',
+        label: 'Aproximovaná FOPDT odezva',
+        data: aproArray.map((p) => ({ x: p.t, y: p.y })),
+        borderColor: '#f59e0b',
         backgroundColor: 'transparent',
         fill: false,
-        tension: 0.2,
+        tension: 0.18,
         pointRadius: 0,
         borderWidth: 2,
-        borderDash: [6, 4],
+        borderDash: [7, 5],
       },
     ].filter(Boolean),
   };
@@ -56,39 +56,39 @@ function Step({ points }) {
       legend: {
         position: 'top',
         labels: {
-          color: '#94a3b8',
+          color: '#cbd5e1',
           usePointStyle: true,
           pointStyle: 'circle',
-          padding: 20,
-          font: { size: 11, weight: '600' }
+          padding: 18,
+          font: { size: 11, weight: '600' },
         },
       },
       title: { display: false },
       tooltip: {
-        backgroundColor: '#1e293b',
+        backgroundColor: '#0f172a',
         titleColor: '#f8fafc',
         bodyColor: '#cbd5e1',
         borderColor: '#334155',
         borderWidth: 1,
-      }
+      },
     },
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'ДЊas [s]', color: '#64748b', font: { size: 11, weight: 'bold' } },
-        grid: { color: '#1e293b', drawBorder: false },
-        ticks: { color: '#64748b' },
+        title: { display: true, text: 'Čas [s]', color: '#94a3b8', font: { size: 11, weight: '600' } },
+        grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
+        ticks: { color: '#94a3b8' },
       },
       y: {
-        title: { display: true, text: 'Amplituda y(t)', color: '#64748b', font: { size: 11, weight: 'bold' } },
-        grid: { color: '#1e293b', drawBorder: false },
-        ticks: { color: '#64748b' },
+        title: { display: true, text: 'Amplituda y(t)', color: '#94a3b8', font: { size: 11, weight: '600' } },
+        grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
+        ticks: { color: '#94a3b8' },
       },
     },
   };
 
   return (
-    <div className="w-full h-full min-h-[350px]">
+    <div className="h-full min-h-[340px] w-full">
       <Line data={data} options={options} />
     </div>
   );

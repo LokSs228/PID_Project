@@ -4,49 +4,33 @@ function PidTable({ data }) {
   if (!data) return null;
 
   const regulatorTypes = ['P', 'PI', 'PD', 'PID'];
-  const headers = ['Typ', 'Kp', 'Ki', 'Kd'];
+  const headers = ['Typ regulátoru', 'Kp', 'Ki', 'Kd'];
 
-  const formatValue = (val) => {
-    return (val != null && typeof val === 'number') 
-      ? val.toFixed(4) 
-      : '–';
-  };
+  const formatValue = (val) => (val != null && typeof val === 'number' ? val.toFixed(4) : '—');
 
   return (
-    <div className="overflow-hidden border border-slate-700/50 rounded-2xl bg-slate-900/20 backdrop-blur-md">
+    <div className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/50">
       <table className="min-w-full border-collapse text-left text-sm text-slate-300">
-        <thead className="bg-slate-800/60 border-b border-slate-700/50">
+        <thead className="border-b border-slate-700/60 bg-slate-800/70">
           <tr>
             {headers.map((head) => (
-              <th 
-                key={head} 
-                className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]"
-              >
+              <th key={head} className="px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                 {head}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/50">
+        <tbody className="divide-y divide-slate-800/80">
           {regulatorTypes.map((type) => (
-            <tr 
-              key={type} 
-              className="group hover:bg-blue-500/5 transition-all duration-200"
-            >
-              <td className="px-6 py-4">
-                <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-slate-800 text-blue-400 font-black text-xs border border-slate-700 group-hover:border-blue-500/50 transition-colors">
+            <tr key={type} className="transition hover:bg-slate-800/50">
+              <td className="px-5 py-3">
+                <span className="inline-flex items-center justify-center rounded-md border border-slate-600 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-sky-300">
                   {type}
                 </span>
               </td>
-              <td className="px-6 py-4 font-mono text-slate-200 tabular-nums">
-                {formatValue(data[type]?.Kp)}
-              </td>
-              <td className="px-6 py-4 font-mono text-slate-400 tabular-nums">
-                {formatValue(data[type]?.Ki)}
-              </td>
-              <td className="px-6 py-4 font-mono text-slate-400 tabular-nums">
-                {formatValue(data[type]?.Kd)}
-              </td>
+              <td className="px-5 py-3 font-mono tabular-nums text-slate-100">{formatValue(data[type]?.Kp)}</td>
+              <td className="px-5 py-3 font-mono tabular-nums text-slate-300">{formatValue(data[type]?.Ki)}</td>
+              <td className="px-5 py-3 font-mono tabular-nums text-slate-300">{formatValue(data[type]?.Kd)}</td>
             </tr>
           ))}
         </tbody>

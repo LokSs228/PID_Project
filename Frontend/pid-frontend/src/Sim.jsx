@@ -16,16 +16,16 @@ ChartJS.register(LinearScale, CategoryScale, PointElement, LineElement, Title, T
 function Sim({ sim_points, y0 }) {
   if (!sim_points || sim_points.length === 0) return null;
 
-  const wData = sim_points.map(point => ({ x: Number(point.t), y: Number(point.w) }));
-  const yData = sim_points.map(point => ({ x: Number(point.t), y: Number(point.y) }));
-  const uData = sim_points.map(point => ({ x: Number(point.t), y: Number(point.u) }));
+  const wData = sim_points.map((point) => ({ x: Number(point.t), y: Number(point.w) }));
+  const yData = sim_points.map((point) => ({ x: Number(point.t), y: Number(point.y) }));
+  const uData = sim_points.map((point) => ({ x: Number(point.t), y: Number(point.u) }));
 
   const data = {
     datasets: [
       {
         label: 'Požadovaná hodnota (w)',
         data: wData,
-        borderColor: '#94a3b8', // slate-400
+        borderColor: '#94a3b8',
         borderDash: [5, 5],
         borderWidth: 2,
         pointRadius: 0,
@@ -33,27 +33,27 @@ function Sim({ sim_points, y0 }) {
       {
         label: 'Výstup systému (y)',
         data: yData,
-        borderColor: '#3b82f6', // blue-500
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: '#22d3ee',
+        backgroundColor: 'rgba(34, 211, 238, 0.12)',
         fill: true,
-        borderWidth: 3,
+        borderWidth: 2.5,
         pointRadius: 0,
-        tension: 0.1,
+        tension: 0.12,
       },
       {
         label: 'Řídicí vstup (u)',
         data: uData,
-        borderColor: '#10b981', // emerald-500
-        borderWidth: 1.5,
+        borderColor: '#34d399',
+        borderWidth: 1.6,
         pointRadius: 0,
         yAxisID: 'y1',
       },
       {
         label: 'Počáteční bod (y₀)',
         data: [{ x: Number(sim_points[0].t), y: Number(y0) }],
-        borderColor: '#ef4444', // red-500
-        backgroundColor: '#ef4444',
-        pointRadius: 6,
+        borderColor: '#f43f5e',
+        backgroundColor: '#f43f5e',
+        pointRadius: 5,
         showLine: false,
       },
     ],
@@ -61,7 +61,7 @@ function Sim({ sim_points, y0 }) {
 
   const options = {
     responsive: true,
-    maintainAspectRatio: false, 
+    maintainAspectRatio: false,
     interaction: {
       mode: 'index',
       intersect: false,
@@ -71,52 +71,49 @@ function Sim({ sim_points, y0 }) {
         display: true,
         position: 'top',
         labels: {
-          color: '#cbd5e1', // slate-300
+          color: '#cbd5e1',
           usePointStyle: true,
-          font: { size: 12, weight: '600' }
+          font: { size: 11, weight: '600' },
         },
       },
       title: { display: false },
       tooltip: {
-        backgroundColor: '#1e293b', // slate-800
+        backgroundColor: '#0f172a',
         titleColor: '#f8fafc',
         bodyColor: '#cbd5e1',
         borderColor: '#334155',
         borderWidth: 1,
-        padding: 12,
-        boxPadding: 6,
       },
     },
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Čas (s)', color: '#64748b' },
-        grid: { color: '#334155', drawBorder: false }, // slate-700
-        ticks: { color: '#64748b' },
+        title: { display: true, text: 'Čas [s]', color: '#94a3b8' },
+        grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
+        ticks: { color: '#94a3b8' },
       },
       y: {
         type: 'linear',
         position: 'left',
-        title: { display: true, text: 'Hodnota (w a y)', color: '#3b82f6' },
-        grid: { color: '#334155', drawBorder: false },
+        title: { display: true, text: 'Hodnota (w, y)', color: '#38bdf8' },
+        grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
         ticks: { color: '#94a3b8' },
       },
       y1: {
         type: 'linear',
         position: 'right',
-        title: { display: true, text: 'Řídicí vstup (u)', color: '#10b981' },
+        title: { display: true, text: 'Řídicí vstup (u)', color: '#34d399' },
         grid: { drawOnChartArea: false },
-        ticks: { color: '#10b981' },
+        ticks: { color: '#34d399' },
       },
     },
   };
 
   return (
-    <div className="w-full h-full min-h-[400px]">
+    <div className="h-full min-h-[420px] w-full">
       <Line data={data} options={options} />
     </div>
   );
 }
 
 export default Sim;
-

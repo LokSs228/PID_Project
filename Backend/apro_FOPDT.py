@@ -46,7 +46,7 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
     return theta, mse
 
 
-def apro_FOPDT(system, downsample=1, max_delay_samples=None):
+def apro_FOPDT(system, downsample=4, max_delay_samples=300):
     """
     Approximation of system by FOPDT model
     G(s) = K / (T*s + 1) * exp(-L*s)

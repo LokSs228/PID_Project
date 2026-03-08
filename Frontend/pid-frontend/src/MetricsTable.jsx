@@ -3,46 +3,37 @@ import React from 'react';
 function MetricsTable({ metrics }) {
   if (!metrics) return null;
 
-  // ИСПРАВЛЕНИЕ: изменили settling_time на settlingTime
-  // (или убедитесь, что имя здесь совпадает с тем, что вы задали в App.js)
   const { overshoot, settlingTime, IAE, ITAE } = metrics;
 
+  const rows = [
+    { label: 'Překmit', value: overshoot, unit: '%' },
+    { label: 'Doba ustálení', value: settlingTime, unit: 's' },
+    { label: 'IAE', value: IAE, unit: 's' },
+    { label: 'ITAE', value: ITAE, unit: 's²' },
+  ];
+
   return (
-    <div style={{ marginTop: 20 }}>
-      <h3>Výsledné metriky simulace</h3>
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+    <div className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/50">
+      <div className="border-b border-slate-700/60 bg-slate-800/70 px-4 py-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">Výsledné metriky</h3>
+      </div>
+
+      <table className="min-w-full border-collapse text-sm">
         <thead>
-          <tr>
-            <th style={{ border: '1px solid #ccc', padding: 8 }}>Metrika</th>
-            <th style={{ border: '1px solid #ccc', padding: 8 }}>Hodnota</th>
+          <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-slate-400">
+            <th className="px-4 py-2.5 font-semibold">Metrika</th>
+            <th className="px-4 py-2.5 font-semibold">Hodnota</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>Overshoot [%]</td>
-            {/* Можно добавить .toFixed(2) для красивого отображения чисел */}
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>
-              {overshoot !== undefined ? Number(overshoot).toFixed(2) : '-'}
-            </td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>Settling Time [s]</td>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>
-              {settlingTime !== undefined ? Number(settlingTime).toFixed(4) : '-'}
-            </td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>IAE [s]</td>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>
-              {IAE !== undefined ? Number(IAE).toFixed(4) : '-'}
-            </td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>ITAE [s²]</td>
-            <td style={{ border: '1px solid #ccc', padding: 8 }}>
-              {ITAE !== undefined ? Number(ITAE).toFixed(4) : '-'}
-            </td>
-          </tr>
+        <tbody className="divide-y divide-slate-800/80">
+          {rows.map((row) => (
+            <tr key={row.label} className="transition hover:bg-slate-800/50">
+              <td className="px-4 py-3 text-slate-200">{row.label}</td>
+              <td className="px-4 py-3 font-mono tabular-nums text-slate-100">
+                {row.value !== undefined && row.value !== null ? `${Number(row.value).toFixed(4)} ${row.unit}` : '—'}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
