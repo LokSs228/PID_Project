@@ -5,11 +5,21 @@ from zn_method import zn_method
 from Sim import simulate
 from GA import genetic_algorithm
 from apro_FOPDT import apro_FOPDT 
-from CHR_0 import CHR_0
-from CHR_20 import CHR_20
+from CHR_0_POZ_H import CHR_0 as CHR_0_POZ_H
+from CHR_20_POZ_H import CHR_20 as CHR_20_POZ_H
+from CHR_0_POT_P import CHR_0_POT_P
+from CHR_20_POT_P import CHR_20_POT_P
 from IMC import IMC
 
 app = Flask(__name__)
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+    return response
 
 def select_pid(controllerType, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD):
     if controllerType == "P":
@@ -102,11 +112,17 @@ def calculate():
     if Method == "ZN":
         pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = zn_method(K_fopdt, T_fopdt, L_fopdt)
 
-    elif Method == "CHR_0":
-        pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_0(K_fopdt, T_fopdt, L_fopdt)
+    elif Method in ("CHR_0", "CHR_0_POZ_H"):
+        pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_0_POZ_H(K_fopdt, T_fopdt, L_fopdt)
 
-    elif Method == "CHR_20":
-        pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_20(K_fopdt, T_fopdt, L_fopdt)
+    elif Method in ("CHR_20", "CHR_20_POZ_H"):
+        pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_20_POZ_H(K_fopdt, T_fopdt, L_fopdt)
+
+    elif Method == "CHR_0_POT_P":
+        pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_0_POT_P(K_fopdt, T_fopdt, L_fopdt)
+
+    elif Method == "CHR_20_POT_P":
+        pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = CHR_20_POT_P(K_fopdt, T_fopdt, L_fopdt)
 
     elif Method == "IMC":
         pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = IMC(K_fopdt, T_fopdt, L_fopdt, alpha)

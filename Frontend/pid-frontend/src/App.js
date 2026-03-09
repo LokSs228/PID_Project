@@ -81,8 +81,10 @@ function App() {
                 <select value={method} onChange={(e) => setMethod(e.target.value)} className={selectClass}>
                   <option value="ZN">Ziegler-Nichols</option>
                   <option value="GA">Genetický algoritmus</option>
-                  <option value="CHR_0">CHR (0 % překmit)</option>
-                  <option value="CHR_20">CHR (20 % překmit)</option>
+                  <option value="CHR_0_POZ_H">CHR (0-prekmit) - pozadavana hodnota</option>
+                  <option value="CHR_0_POT_P">CHR (0-prekmit) - potlaceni poruchy</option>
+                  <option value="CHR_20_POZ_H">CHR (20-prekmit) - pozadavana hodnota</option>
+                  <option value="CHR_20_POT_P">CHR (20-prekmit) - potlaceni poruchy</option>
                   <option value="IMC">IMC / Lambda</option>
                 </select>
               </div>
