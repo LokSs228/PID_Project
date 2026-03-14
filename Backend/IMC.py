@@ -1,7 +1,14 @@
 def IMC (K, T, L, alpha):
     if K <= 0 or T <= 0 or L <= 0:
         return None
-    lambda_ = alpha * L
+    ratio = L / T
+    if 0.5 <= ratio <= 2:
+        base_lambda = T
+    elif ratio > 2:
+        base_lambda = L
+    else:
+        base_lambda = 0.5 * T
+    lambda_ = alpha * base_lambda
 #P
     Kp_P = T / (K * (lambda_ + L))    
 # PI

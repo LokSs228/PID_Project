@@ -17,6 +17,8 @@ function TransferFunctionInput({
   const [T_num, setTNum] = React.useState(['']);
   const [T_den, setTDen] = React.useState(['']);
   const [L, setL] = React.useState('');
+  const [diffOrder, setDiffOrder] = React.useState('');
+  const [intOrder, setIntOrder] = React.useState('');
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [timeParams, setTimeParams] = React.useState({
@@ -60,16 +62,18 @@ function TransferFunctionInput({
     try {
       const body = {
         controllerType,
-        K: parseFloat(K),
-        T_num: T_num.map((val) => parseFloat(val)).filter((val) => !isNaN(val)),
-        T_den: T_den.map((val) => parseFloat(val)).filter((val) => !isNaN(val)),
+        K,
+        T_num: T_num.filter((val) => val !== ''),
+        T_den: T_den.filter((val) => val !== ''),
         Method: method,
         timeParams: Object.values(timeParams).map(parseFloat),
         y0: parseFloat(y0),
         lambdaAlpha,
       };
 
-      if (L !== '') body.L = parseFloat(L);
+      if (L !== '') body.L = L;
+      if (diffOrder !== '') body.diffOrder = diffOrder;
+      if (intOrder !== '') body.intOrder = intOrder;
 
       if (method === 'GA') {
         body.generations = generations;
@@ -96,16 +100,27 @@ function TransferFunctionInput({
 
   const renderLatex = () => {
     if (K === '' || T_den.some((t) => t === '')) return '\\text{G(s) = ...}';
+    const formatCoeff = (val) => {
+      const text = String(val).trim().replace(/j/gi, 'i');
+      const isComplex = /[ij]/i.test(text);
+      return isComplex ? `\\left(${text}\\right)` : text;
+    };
     const num = T_num
       .filter((v) => v !== '')
-      .map((v) => `(${v}s + 1)`)
+      .map((v) => `(${formatCoeff(v)}s + 1)`)
       .join('\\cdot ');
     const den = T_den
       .filter((v) => v !== '')
-      .map((v) => `(${v}s + 1)`)
+      .map((v) => `(${formatCoeff(v)}s + 1)`)
       .join('\\cdot ');
+    const diffPow = diffOrder !== '' ? parseInt(diffOrder, 10) : 0;
+    const intPow = intOrder !== '' ? parseInt(intOrder, 10) : 0;
+    const diffTerm = diffPow > 0 ? `s^{${diffPow}}` : '';
+    const intTerm = intPow > 0 ? `s^{${intPow}}` : '';
+    const numWithDiff = [diffTerm, num].filter(Boolean).join('\\cdot ');
+    const denWithInt = [intTerm, den].filter(Boolean).join('\\cdot ');
     const delay = L !== '' ? `\\cdot e^{- ${L}s}` : '';
-    return `G(s) = \\frac{${K}${num ? '\\cdot ' + num : ''}}{${den}}${delay}`;
+    return `G(s) = \\frac{${K}${numWithDiff ? '\\cdot ' + numWithDiff : ''}}{${denWithInt || '1'}}${delay}`;
   };
 
   return (
@@ -113,14 +128,19 @@ function TransferFunctionInput({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-900/40 p-5">
           <h3 className="text-sm font-semibold text-slate-200">Parametry přenosu</h3>
+          <p className="text-[11px] text-slate-400">
+            Podporovány jsou komplexní hodnoty ve tvaru <span className="font-semibold text-slate-200">a+bi</span> nebo{" "}
+            <span className="font-semibold text-slate-200">a-bi</span>. Při použití komplexních členů zadávej i{" "}
+            <span className="font-semibold text-slate-200">sdružené dvojice</span>, aby výsledný polynom byl reálný.
+          </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelStyle}>Zesílení (K)</label>
-              <input type="number" step="any" value={K} onChange={(e) => setK(e.target.value)} className={inputStyle} required />
+              <input type="text" value={K} onChange={(e) => setK(e.target.value)} className={inputStyle} required />
             </div>
             <div>
               <label className={labelStyle}>Dopravní zpoždění (L)</label>
-              <input type="number" step="any" value={L} onChange={(e) => setL(e.target.value)} className={inputStyle} />
+              <input type="text" value={L} onChange={(e) => setL(e.target.value)} className={inputStyle} />
             </div>
           </div>
 
@@ -130,8 +150,7 @@ function TransferFunctionInput({
               {T_num.map((v, i) => (
                 <div key={i} className="flex gap-2">
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
                     value={v}
                     onChange={(e) => updateArrayValue(setTNum, T_num, i, e.target.value)}
                     className={inputStyle}
@@ -158,8 +177,7 @@ function TransferFunctionInput({
               {T_den.map((v, i) => (
                 <div key={i} className="flex gap-2">
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
                     value={v}
                     onChange={(e) => updateArrayValue(setTDen, T_den, i, e.target.value)}
                     className={inputStyle}
@@ -179,6 +197,54 @@ function TransferFunctionInput({
               <button type="button" onClick={() => setTDen([...T_den, ''])} className="text-[11px] font-semibold text-sky-400 transition hover:text-sky-300">
                 + Přidat člen
               </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3">
+              <div className="flex items-center justify-between">
+                <label className={labelStyle}>Diferenciátor (s^m)</label>
+                <button
+                  type="button"
+                  onClick={() => setDiffOrder(diffOrder === '' ? '1' : '')}
+                  className="rounded-lg border border-slate-700 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 transition hover:border-sky-500 hover:text-sky-300"
+                >
+                  {diffOrder === '' ? 'Přidat' : 'Odebrat'}
+                </button>
+              </div>
+              {diffOrder !== '' && (
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={diffOrder}
+                  onChange={(e) => setDiffOrder(e.target.value)}
+                  className={inputStyle}
+                />
+              )}
+            </div>
+
+            <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3">
+              <div className="flex items-center justify-between">
+                <label className={labelStyle}>Integrator (s^r)</label>
+                <button
+                  type="button"
+                  onClick={() => setIntOrder(intOrder === '' ? '1' : '')}
+                  className="rounded-lg border border-slate-700 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 transition hover:border-amber-500 hover:text-amber-300"
+                >
+                  {intOrder === '' ? 'Přidat' : 'Odebrat'}
+                </button>
+              </div>
+              {intOrder !== '' && (
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={intOrder}
+                  onChange={(e) => setIntOrder(e.target.value)}
+                  className={inputStyle}
+                />
+              )}
             </div>
           </div>
         </section>

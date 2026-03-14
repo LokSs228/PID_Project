@@ -31,6 +31,58 @@ def select_pid(controllerType, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD
     else: 
         return Kp_PID, Ki_PID, Kd_PID
 
+def parse_complex(value, field_name):
+    if value is None:
+        return None
+    if isinstance(value, (int, float, complex)):
+        return complex(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if text == "":
+            return None
+        text = text.replace("i", "j").replace("I", "j").replace("J", "j")
+        text = text.replace(" ", "")
+        try:
+            return complex(text)
+        except ValueError:
+            raise ValueError(f'Invalid complex value for {field_name}: "{value}"')
+    raise ValueError(f'Invalid type for {field_name}')
+
+def parse_real(value, field_name, tol=1e-9):
+    z = parse_complex(value, field_name)
+    if z is None:
+        return None
+    if abs(z.imag) <= tol:
+        return float(z.real)
+    raise ValueError(f'{field_name} must be real')
+
+def parse_complex_list(values, field_name):
+    if values is None:
+        return []
+    result = []
+    for i, v in enumerate(values):
+        z = parse_complex(v, f"{field_name}[{i}]")
+        if z is not None:
+            result.append(z)
+    return result
+
+def to_real_array_if_close(arr, field_name, tol=1e-9):
+    arr = np.asarray(arr, dtype=complex)
+    if np.any(np.abs(arr.imag) > tol):
+        raise ValueError(f'{field_name} has non-real coefficients. Provide conjugate pairs so the final polynomial is real.')
+    return np.asarray(arr.real, dtype=float)
+
+def parse_nonneg_int(value, field_name):
+    if value is None or value == "":
+        return 0
+    try:
+        iv = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f'{field_name} must be a non-negative integer')
+    if iv < 0:
+        raise ValueError(f'{field_name} must be a non-negative integer')
+    return iv
+
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
@@ -39,6 +91,8 @@ def calculate():
     T_num = data.get('T_num', [])
     T_den = data.get('T_den', [])
     L_in = data.get('L', 0)
+    diff_order_in = data.get('diffOrder', 0)
+    int_order_in = data.get('intOrder', 0)
     Method = data.get('Method')
     Params = data.get('timeParams', [])
     y0 = data.get('y0', 0)
@@ -61,12 +115,15 @@ def calculate():
         return jsonify({'error': 'Missing parameters K or T'}), 400
 
     try:
-        K_val = float(K_in)
-        T_den_vals = [float(Ti) for Ti in T_den]
-        T_num_vals = [float(Ti) for Ti in T_num]
-        L_val = float(L_in)
-    except ValueError:
-        return jsonify({'error': 'Некорректные числовые значения'}), 400
+        K_val = parse_real(K_in, "K")
+        T_den_vals = parse_complex_list(T_den, "T_den")
+        T_num_vals = parse_complex_list(T_num, "T_num")
+        L_val = parse_real(L_in, "L")
+        diff_order = parse_nonneg_int(diff_order_in, "diffOrder")
+        int_order = parse_nonneg_int(int_order_in, "intOrder")
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
 
     model_type = len(T_den_vals)
     num = [1]
@@ -75,6 +132,17 @@ def calculate():
     den = [1]
     for ti in T_den_vals:
         den = np.polymul(den, [ti, 1])
+
+    try:
+        num = to_real_array_if_close(num, "Numerator")
+        den = to_real_array_if_close(den, "Denominator")
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if diff_order > 0:
+        num = np.append(num, np.zeros(diff_order))
+    if int_order > 0:
+        den = np.append(den, np.zeros(int_order))
 
     base_system = tf([K_val], [1]) * tf(num, den)
     system = base_system
