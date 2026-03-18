@@ -9,17 +9,17 @@ def IMC (K, T, L, alpha):
     else:
         base_lambda = 0.5 * T
     lambda_ = alpha * base_lambda
-#P
+# Regulátor P
     Kp_P = T / (K * (lambda_ + L))    
-# PI
+# Regulátor PI
     Kp_PI = T / (K * (lambda_ + L))
     Ki_PI = Kp_PI / T
-#PD
+# Regulátor PD
     Kp_PD = T / (K * (lambda_ + L))
     Td = (T * L) / (T + L)
     Kd_PD = Kp_PD * Td
     
-# PID
+# Regulátor PID
     Kp_PID = (T + 0.5 * L) / (K * (lambda_ + 0.5 * L))
     Ti = T + 0.5 * L
     Ki_PID = Kp_PID / Ti

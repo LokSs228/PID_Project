@@ -147,36 +147,36 @@ def calculate():
     base_system = tf([K_val], [1]) * tf(num, den)
     system = base_system
 
-    # Добавление задержки (Padé approximation)
+    # Přidání zpoždění (Padé aproximace)
     if L_val > 0:
-        num_delay, den_delay = pade(L_val, 4) # 3-й порядок аппроксимации
+        num_delay, den_delay = pade(L_val, 4) # aproximace 4. řádu
         delay = tf(num_delay, den_delay)
         system = base_system * delay
 
-    # --- 3. Инициализация переменных для результата ---
+    # --- 3. Inicializace proměnných pro výsledek ---
     points = []
     pid_coeffs = {}
     
-    # Инициализируем нулями
+    # Inicializujeme nulami
     Kp_P = Kp_PI = Kp_PID = Ki_PI = Ki_PID = Kd_PID = Kp_PD = Kd_PD = 0
     
-    # Переменные для аппроксимированной модели (FOPDT)
+    # Proměnné pro aproximovaný model (FOPDT)
     K_fopdt, T_fopdt, L_fopdt = K_val, 0, L_val 
     apro_FOPDT_system = None
     apro_points = []
 
-    # --- 4. Выбор метода настройки ---
+    # --- 4. Volba metody ladění ---
     
-    # Если метод НЕ генетический, нам почти всегда нужна аппроксимация FOPDT
+    # Pokud metoda NENÍ genetická, téměř vždy potřebujeme aproximaci FOPDT
     if Method != "GA":
         try:
             K_ap, T_ap, L_ap = apro_FOPDT(system)
-            # Обновляем переменные, которые пойдут в методы расчета PID
+            # Aktualizujeme proměnné, které půjdou do metod výpočtu PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
         except Exception as e:
             return jsonify({'error': f'Ошибка аппроксимации FOPDT: {str(e)}'}), 500
 
-    # Расчет коэффициентов
+    # Výpočet koeficientů
     if Method == "ZN":
         pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD = zn_method(K_fopdt, T_fopdt, L_fopdt)
 
@@ -220,7 +220,7 @@ def calculate():
             ]
         except Exception:
             apro_points = []
-    # --- 5. Выбор итоговых коэффициентов и Симуляция ---
+    # --- 5. Volba výsledných koeficientů a simulace ---
     Kp, Ki, Kd = select_pid(
         controllerType,
         Kp_P, Kp_PI, Kp_PID,
@@ -228,7 +228,7 @@ def calculate():
         Kd_PID, Kp_PD, Kd_PD
     )
     try:
-        # Теперь simulate возвращает словарь, содержащий и sim_points, и metrics, и step_data
+        # Funkce simulate nyní vrací slovník se sim_points, metrics a step_data
         sim_results = simulate(system, Kp, Ki, Kd, Params, y0)
         sim_points = sim_results["sim_points"]
         metrics = sim_results["metrics"]
@@ -236,14 +236,14 @@ def calculate():
         
     except Exception as e:
         return jsonify({'error': f'Ошибка симуляции: {str(e)}'}), 500
-    # Опеределение реакции разомкнутой системы (Open Loop)
+    # Určení odezvy otevřené smyčky (Open Loop)
     try:
         t_resp, y_resp = step_response(system)
         points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t_resp, y_resp)]
     except Exception:
         points = []
 
-    # --- 6. Формирование ответа ---
+    # --- 6. Sestavení odpovědi ---
     return jsonify({
         'step_response': points,
         'apro_step_response': apro_points,
@@ -251,16 +251,16 @@ def calculate():
         'model_type': model_type,
         'y0': y0,
         'sim_points': sim_points,
-        # Данные из словаря metrics (рассчитанные внутри simulate)
+        # Data ze slovníku metrics (vypočítaná uvnitř simulate)
         'overshoot': metrics["overshoot"],
         'settlingtime': metrics["settling_time"],
         'IAE': metrics["IAE"],
         'ITAE': metrics["ITAE"],
-        # Параметры модели
+        # Parametry modelu
         'K': K_fopdt, 
         'T': T_fopdt,
         'L': L_fopdt,
-        # Данные для детального графика переходного процесса
+        # Data pro detailní graf přechodového děje
         'step w': step_data["w"],
         'step t': step_data["t"],
         'step y': step_data["y"]

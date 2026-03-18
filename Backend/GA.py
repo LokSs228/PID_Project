@@ -75,26 +75,26 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             score = simulate_and_score(individual['Kp'], individual['Ki'], individual['Kd'])
             scored_population.append((score, individual))
 
-        # Элитизм: гарантированно сохраняем 2-х лучших особей без изменений, 
-        # чтобы алгоритм не «забыл» удачное решение
+        # Elitismus: garantovaně zachováme 2 nejlepší jedince beze změn,
+        # aby algoritmus nezapomněl povedené řešení
         scored_population.sort(key=lambda x: x[0])
         next_population = [ind for _, ind in scored_population[:2]]
 
-        # Функция турнирной селекции (Tournament Selection)
+        # Funkce turnajové selekce (Tournament Selection)
         def tournament_selection(scored_pop, k=3):
-            # Выбираем k случайных кандидатов и берем победителя (с наименьшей ошибкой)
+            # Vybereme k náhodných kandidátů a vezmeme vítěze (s nejmenší chybou)
             candidates = random.sample(scored_pop, k)
             candidates.sort(key=lambda x: x[0])
             return candidates[0][1]
 
-        # Воспроизводство и мутация
+        # Reprodukce a mutace
         while len(next_population) < population_size:
-            # 1. Селекция
+            # 1. Selekce
             parent1 = tournament_selection(scored_population)
             parent2 = tournament_selection(scored_population)
 
-            # 2. Арифметическое скрещивание с весовым коэффициентом (BLX-crossover)
-            # В отличие от жесткого среднего (p1+p2)/2, мы берем случайный вес alpha
+            # 2. Aritmetické křížení s váhovým koeficientem (BLX-crossover)
+            # Na rozdíl od pevného průměru (p1+p2)/2 bereme náhodnou váhu alpha
             alpha = random.random()
             child = {
                 'Kp': alpha * parent1['Kp'] + (1 - alpha) * parent2['Kp'],
@@ -102,16 +102,16 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
                 'Kd': alpha * parent1['Kd'] + (1 - alpha) * parent2['Kd'],
             }
 
-            # 3. Гауссова мутация (Gaussian Mutation) - стандарт для вещественных ГА
+            # 3. Gaussova mutace (Gaussian Mutation) - standard pro reálné GA
             if random.random() < mutation_rate:
-                # Добавляем шум из нормального распределения (среднее 0, ст. отклонение 0.5)
-                # Это позволяет делать точную настройку параметров
+                # Přidáváme šum z normálního rozdělení (střední 0, směrodatná odchylka 0.5)
+                # To umožňuje jemné ladění parametrů
                 child['Kp'] += random.gauss(0.0, 0.5)
                 child['Ki'] += random.gauss(0.0, 0.5)
                 child['Kd'] += random.gauss(0.0, 0.5)
 
-            # 4. Ограничение физичности параметров (Anti-windup для самих коэффициентов)
-            # Коэффициенты не могут быть отрицательными, и задаем разумный верхний предел
+            # 4. Omezení fyzičnosti parametrů (Anti-windup pro samotné koeficienty)
+            # Koeficienty nemohou být záporné a nastavujeme rozumný horní limit
             child['Kp'] = max(0.0, min(child['Kp'], 100.0))
             child['Ki'] = max(0.0, min(child['Ki'], 100.0))
             child['Kd'] = max(0.0, min(child['Kd'], 100.0))
