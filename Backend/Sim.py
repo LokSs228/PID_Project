@@ -6,20 +6,51 @@ def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     t1, t2, t3, t4, t5, t6, t7, w1, w2 = Params[:9]
     disturbance_time = Params[9] if len(Params) > 9 else np.inf
     disturbance_value = Params[10] if len(Params) > 10 else 0.0
+    def to_float_or_none(value):
+        try:
+            if value is None:
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
+    t1 = to_float_or_none(t1)
+    t2 = to_float_or_none(t2)
+    t3 = to_float_or_none(t3)
+    t4 = to_float_or_none(t4)
+    t5 = to_float_or_none(t5)
+    t6 = to_float_or_none(t6)
+    t7 = to_float_or_none(t7)
+    w1 = to_float_or_none(w1)
+    w2 = to_float_or_none(w2)
+
+    if t1 is None or t2 is None or t7 is None or w1 is None or w2 is None:
+        raise ValueError("Invalid time parameters: t1, t2, t7, w1, w2 must be numeric.")
+
+    use_simple_profile = (
+        t3 is None
+        or t4 is None
+        or t5 is None
+        or t6 is None
+        or t4 <= t3
+        or t6 <= t5
+    )
     dt = t7 / 1500
     t_values = np.arange(0, t7 + dt, dt)
     w_values = np.zeros_like(t_values)
 
     # 1. Tvorba vstupního signálu (zadání)
     for i, t in enumerate(t_values):
-        if t < t1: w_values[i] = w1
-        elif t < t2: w_values[i] = w2
-        elif t < t3: w_values[i] = w1
-        elif t < t4: w_values[i] = w1 + (w2 - w1) * ((t - t3) / (t4 - t3))
-        elif t < t5: w_values[i] = w2
-        elif t < t6: w_values[i] = w2 - (w2 - w1) * ((t - t5) / (t6 - t5))
-        else: w_values[i] = w1
+        if use_simple_profile:
+            w_values[i] = w1 if t < t1 else w2
+        else:
+            if t < t1: w_values[i] = w1
+            elif t < t2: w_values[i] = w2
+            elif t < t3: w_values[i] = w1
+            elif t < t4: w_values[i] = w1 + (w2 - w1) * ((t - t3) / (t4 - t3))
+            elif t < t5: w_values[i] = w2
+            elif t < t6: w_values[i] = w2 - (w2 - w1) * ((t - t5) / (t6 - t5))
+            else: w_values[i] = w1
 
     # 2. Příprava modelu systému
     num = np.atleast_1d(system.num[0][0])
@@ -88,3 +119,4 @@ def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
         "metrics": metrics,
         "step_data": {"t": step_t, "y": step_y, "w": step_w}
     }
+

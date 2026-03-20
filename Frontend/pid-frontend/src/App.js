@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import TransferFunctionInput from './TransferFunctionInput';
 import PidTable from './PIDtable';
 import Step from './Step';
@@ -11,6 +11,9 @@ function App() {
   const [sim_points, setSimParams] = useState(null);
   const [y0, setY0] = useState(null);
   const [method, setMethod] = useState('ZN');
+  const [chrVariant, setChrVariant] = useState('CHR_0_POZ_H');
+  const [isMethodOpen, setIsMethodOpen] = useState(false);
+  const [isChrExpanded, setIsChrExpanded] = useState(false);
   const [generations, setGenerations] = useState(50);
   const [populationSize, setPopulationSize] = useState(20);
   const [mutationRate, setMutationRate] = useState(0.1);
@@ -57,6 +60,75 @@ function App() {
   const selectClass =
     'block w-full rounded-xl border border-slate-700/80 bg-slate-900/80 p-3 text-sm text-slate-100 transition hover:border-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30';
 
+  const methodGroup = method.startsWith('CHR_') ? 'CHR' : method;
+  const methodDropdownRef = useRef(null);
+
+  const chrOptions = [
+    { value: 'CHR_0_POZ_H', label: '0% prekmit, pozadavana hodnota' },
+    { value: 'CHR_0_POT_P', label: '0% prekmit, potlaceni poruchy' },
+    { value: 'CHR_20_POZ_H', label: '20% prekmit, pozadavana hodnota' },
+    { value: 'CHR_20_POT_P', label: '20% prekmit, potlaceni poruchy' },
+  ];
+
+  const methodLabels = {
+    ZN: 'Ziegler-Nichols',
+    GA: 'Geneticky algoritmus',
+    IMC: 'IMC / Lambda',
+  };
+
+  const handleMethodGroupChange = (value) => {
+    if (value === 'CHR') {
+      setMethod(chrVariant);
+      return;
+    }
+    setMethod(value);
+  };
+
+  const handleChrVariantChange = (value) => {
+    setChrVariant(value);
+    setMethod(value);
+  };
+
+  const handleMethodSelect = (value) => {
+    if (value === 'CHR') {
+      setIsChrExpanded((prev) => !prev);
+      return;
+    }
+    handleMethodGroupChange(value);
+    setIsMethodOpen(false);
+    setIsChrExpanded(false);
+  };
+
+  const handleChrSelect = (value) => {
+    handleChrVariantChange(value);
+    setIsMethodOpen(false);
+    setIsChrExpanded(true);
+  };
+
+  const currentMethodLabel = () => {
+    if (methodGroup === 'CHR') {
+      const currentChr = chrOptions.find((option) => option.value === method);
+      return currentChr ? `CHR ${currentChr.label}` : 'CHR';
+    }
+    return methodLabels[method] || method;
+  };
+
+  useEffect(() => {
+    if (methodGroup === 'CHR') {
+      setIsChrExpanded(true);
+    }
+  }, [methodGroup]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (methodDropdownRef.current && !methodDropdownRef.current.contains(event.target)) {
+        setIsMethodOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-slate-950 px-4 py-6 text-slate-100 sm:px-8">
       <div className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
@@ -76,17 +148,66 @@ function App() {
             <h2 className={sectionLabel}>Nastavení výpočtu</h2>
 
             <div className="space-y-4">
-              <div>
-                <label className={sectionLabel}>Metoda ladění</label>
-                <select value={method} onChange={(e) => setMethod(e.target.value)} className={selectClass}>
-                  <option value="ZN">Ziegler-Nichols</option>
-                  <option value="GA">Genetický algoritmus</option>
-                  <option value="CHR_0_POZ_H">CHR (0-prekmit) - pozadavana hodnota</option>
-                  <option value="CHR_0_POT_P">CHR (0-prekmit) - potlaceni poruchy</option>
-                  <option value="CHR_20_POZ_H">CHR (20-prekmit) - pozadavana hodnota</option>
-                  <option value="CHR_20_POT_P">CHR (20-prekmit) - potlaceni poruchy</option>
-                  <option value="IMC">IMC / Lambda</option>
-                </select>
+              <div className="relative" ref={methodDropdownRef}>
+                <label className={sectionLabel}>Metoda ladeni</label>
+                <button
+                  type="button"
+                  className={`${selectClass} flex items-center justify-between text-left`}
+                  onClick={() => setIsMethodOpen((prev) => !prev)}
+                >
+                  <span>{currentMethodLabel()}</span>
+                  <span className="ml-4 text-slate-400">v</span>
+                </button>
+
+                {isMethodOpen && (
+                  <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-700/80 bg-slate-900/95 p-2 shadow-xl shadow-slate-950/40 backdrop-blur-sm">
+                    <button
+                      type="button"
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800/80"
+                      onClick={() => handleMethodSelect('ZN')}
+                    >
+                      Ziegler-Nichols
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800/80"
+                      onClick={() => handleMethodSelect('GA')}
+                    >
+                      Geneticky algoritmus
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800/80"
+                      onClick={() => handleMethodSelect('CHR')}
+                    >
+                      <span>CHR</span>
+                      <span className="text-slate-400">{isChrExpanded ? '^' : 'v'}</span>
+                    </button>
+                    {isChrExpanded && (
+                      <div className="mt-1 space-y-1 border-l border-slate-700/70 pl-3">
+                        {chrOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
+                              method === option.value ? 'bg-slate-800/80 text-sky-200' : 'text-slate-200 hover:bg-slate-800/60'
+                            }`}
+                            onClick={() => handleChrSelect(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800/80"
+                      onClick={() => handleMethodSelect('IMC')}
+                    >
+                      IMC / Lambda
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -230,3 +351,6 @@ function App() {
 }
 
 export default App;
+
+
+
