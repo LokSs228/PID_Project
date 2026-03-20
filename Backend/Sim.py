@@ -1,6 +1,12 @@
 import numpy as np
 from scipy.signal import cont2discrete, tf2ss
 
+def _as_scalar(value):
+    arr = np.asarray(value)
+    if arr.ndim == 0:
+        return float(arr)
+    return float(arr.reshape(-1)[0])
+
 def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     Kp, Ki, Kd = Kp_PID, Ki_PID, Kd_PID
     t1, t2, t3, t4, t5, t6, t7, w1, w2 = Params[:9]
@@ -60,7 +66,7 @@ def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
 
     n = A_d.shape[0]
     x = np.zeros((n, 1))
-    y = float(y0)
+    y = _as_scalar(y0)
     y_prev = y
     integral = 0.0
 
@@ -89,7 +95,7 @@ def simulate (system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
         # Krok systému
         x = A_d @ x + B_d * u
         y_prev = y
-        y = float(C_d @ x + D_d * u)
+        y = _as_scalar(C_d @ x + D_d * u)
 
     # 4. Výpočet metrik (vnitřní blok metrix)
     metrics = {"overshoot": 0, "settling_time": 0, "IAE": 0, "ITAE": 0}

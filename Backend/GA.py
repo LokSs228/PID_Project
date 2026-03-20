@@ -2,6 +2,12 @@ import numpy as np
 import random
 from scipy.signal import tf2ss, cont2discrete
 
+def _as_scalar(value):
+    arr = np.asarray(value)
+    if arr.ndim == 0:
+        return float(arr)
+    return float(arr.reshape(-1)[0])
+
 def genetic_algorithm(system, params, y0, generations, population_size, mutation_rate, controllerType):
     def simulate_and_score(Kp, Ki, Kd):
         # Načítáme pouze časové body a hodnoty setpointu
@@ -24,7 +30,7 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
         A_d, B_d, C_d, D_d, _ = sysd
 
         x = np.linalg.pinv(C_d) @ np.array([y0])
-        y = float(y0)
+        y = _as_scalar(y0)
         e_prev = 0.0
         integral = 0.0
         y_array = [y]
@@ -52,7 +58,7 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             u = max(min(u, 1000), -1000)
 
             x = A_d @ x + B_d.flatten() * u
-            y = float(C_d @ x + D_d.flatten() * u)
+            y = _as_scalar(C_d @ x + D_d.flatten() * u)
             y_array.append(y)
 
         y_array = np.array(y_array)
