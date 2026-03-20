@@ -14,17 +14,26 @@ from IMC import IMC
 
 app = Flask(__name__)
 
+def normalize_origin(origin):
+    if origin is None:
+        return None
+    origin = origin.strip()
+    if origin == "*":
+        return "*"
+    return origin.rstrip("/")
+
 def parse_allowed_origins():
     raw = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return [normalize_origin(origin) for origin in raw.split(",") if origin.strip()]
 
 ALLOWED_ORIGINS = parse_allowed_origins()
 
 def resolve_cors_origin(request_origin):
+    request_origin_normalized = normalize_origin(request_origin)
     if "*" in ALLOWED_ORIGINS:
         return "*"
-    if request_origin and request_origin in ALLOWED_ORIGINS:
-        return request_origin
+    if request_origin_normalized and request_origin_normalized in ALLOWED_ORIGINS:
+        return request_origin_normalized
     if ALLOWED_ORIGINS:
         return ALLOWED_ORIGINS[0]
     return "http://localhost:3000"
@@ -107,8 +116,11 @@ def parse_nonneg_int(value, field_name):
     return iv
 
 
-@app.route('/calculate', methods=['POST'])
+@app.route('/calculate', methods=['POST', 'OPTIONS'])
 def calculate():
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
     data = request.json
     K_in = data.get('K')
     T_num = data.get('T_num', [])
