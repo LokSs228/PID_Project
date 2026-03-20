@@ -81,7 +81,10 @@ function TransferFunctionInput({
         body.mutation_rate = mutationRate;
       }
 
-      const response = await fetch('/calculate', {
+      const apiBaseUrl = (process.env.REACT_APP_API_URL || '').trim().replace(/\/+$/, '');
+      const calculateUrl = apiBaseUrl ? `${apiBaseUrl}/calculate` : '/calculate';
+
+      const response = await fetch(calculateUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

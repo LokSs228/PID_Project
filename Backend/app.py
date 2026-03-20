@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from flask import Flask, request, jsonify
 from control import tf, step_response, pade
 from zn_method import zn_method
@@ -13,13 +14,35 @@ from IMC import IMC
 
 app = Flask(__name__)
 
+def parse_allowed_origins():
+    raw = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+ALLOWED_ORIGINS = parse_allowed_origins()
+
+def resolve_cors_origin(request_origin):
+    if "*" in ALLOWED_ORIGINS:
+        return "*"
+    if request_origin and request_origin in ALLOWED_ORIGINS:
+        return request_origin
+    if ALLOWED_ORIGINS:
+        return ALLOWED_ORIGINS[0]
+    return "http://localhost:3000"
+
 
 @app.after_request
 def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+    allowed_origin = resolve_cors_origin(request.headers.get("Origin"))
+    response.headers["Access-Control-Allow-Origin"] = allowed_origin
+    if allowed_origin != "*":
+        response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
     response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
     return response
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'}), 200
 
 def select_pid(controllerType, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD):
     if controllerType == "P":
@@ -267,5 +290,7 @@ def calculate():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", "5000"))
+    debug = os.getenv("FLASK_DEBUG", "0") == "1"
+    app.run(host='0.0.0.0', port=port, debug=debug)
 
