@@ -7,7 +7,7 @@ function MetricsTable({ metrics }) {
 
   const rows = [
     { label: 'Překmit', value: overshoot, unit: '%' },
-    { label: 'Doba ustálení', value: settlingTime, unit: 's' },
+    { label: 'Settling time 5%', value: settlingTime, unit: 's' },
     { label: 'IAE', value: IAE, unit: 's' },
     { label: 'ITAE', value: ITAE, unit: 's²' },
   ];
