@@ -55,7 +55,7 @@ function App() {
     );
   };
 
-  const panelClass = 'rounded-2xl border border-slate-700/60 bg-slate-900/45 p-6 shadow-xl shadow-slate-950/30 backdrop-blur-sm';
+  const panelClass = 'rounded-2xl border border-slate-700/60 bg-slate-900/45 p-4 shadow-xl shadow-slate-950/30 backdrop-blur-sm sm:p-6';
   const sectionLabel = 'mb-3 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400';
   const selectClass =
     'block w-full rounded-xl border border-slate-700/80 bg-slate-900/80 p-3 text-sm text-slate-100 transition hover:border-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30';
@@ -130,7 +130,7 @@ function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-slate-950 px-4 py-6 text-slate-100 sm:px-8">
+    <div className="relative min-h-screen overflow-x-hidden bg-slate-950 px-3 py-5 text-slate-100 sm:px-6 sm:py-6 lg:px-8">
       <div className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
       <div className="pointer-events-none absolute -right-36 top-36 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
 
@@ -321,7 +321,7 @@ function App() {
 
               <section className={`${panelClass} lg:col-span-8`}>
                 <h2 className={sectionLabel}>Přechodová charakteristika systému</h2>
-                <div className="h-[420px]">
+                <div className="h-[320px] sm:h-[420px]">
                   <Step points={stepPoints} />
                 </div>
               </section>
@@ -330,7 +330,7 @@ function App() {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
               <section className={`${panelClass} lg:col-span-9`}>
                 <h2 className={`${sectionLabel} text-center`}>Simulace regulačního pochodu s PID regulátorem</h2>
-                <div className="h-[520px]">
+                <div className="h-[360px] sm:h-[520px]">
                   <Sim sim_points={sim_points} y0={y0} />
                 </div>
               </section>

@@ -261,7 +261,7 @@ function TransferFunctionInput({
                 i
               </div>
 
-              <div className="invisible absolute left-0 top-6 z-50 w-80 rounded-xl border border-slate-700 bg-slate-800 p-4 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
+              <div className="invisible absolute left-0 top-6 z-50 w-80 max-w-[calc(100vw-3rem)] rounded-xl border border-slate-700 bg-slate-800 p-4 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
                 <h4 className="mb-3 border-b border-slate-700 pb-1 text-xs font-bold uppercase text-sky-400">Struktura simulace</h4>
                 <div className="space-y-3 text-[11px] leading-relaxed text-slate-300">
                   <section>
@@ -288,7 +288,7 @@ function TransferFunctionInput({
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {['t1', 't2', 't3', 't4', 't5', 't6', 't7', 'w1', 'w2', 'y0'].map((k) => (
                 <div key={k}>
                   <input
@@ -318,8 +318,12 @@ function TransferFunctionInput({
             </div>
           </div>
 
-          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-blue-100">
-            <BlockMath math={renderLatex()} />
+          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-blue-100 sm:p-4">
+            <div className="overflow-x-auto">
+              <div className="min-w-max pr-1">
+                <BlockMath math={renderLatex()} />
+              </div>
+            </div>
           </div>
         </section>
       </div>

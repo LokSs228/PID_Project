@@ -9,7 +9,7 @@ function PidTable({ data }) {
   const formatValue = (val) => (val != null && typeof val === 'number' ? val.toFixed(4) : '—');
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/50">
+    <div className="overflow-x-auto rounded-2xl border border-slate-700/60 bg-slate-900/50">
       <table className="min-w-full border-collapse text-left text-sm text-slate-300">
         <thead className="border-b border-slate-700/60 bg-slate-800/70">
           <tr>

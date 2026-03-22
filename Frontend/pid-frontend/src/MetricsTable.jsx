@@ -13,7 +13,7 @@ function MetricsTable({ metrics }) {
   ];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/50">
+    <div className="overflow-x-auto rounded-2xl border border-slate-700/60 bg-slate-900/50">
       <div className="border-b border-slate-700/60 bg-slate-800/70 px-4 py-3">
         <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">Výsledné metriky</h3>
       </div>
