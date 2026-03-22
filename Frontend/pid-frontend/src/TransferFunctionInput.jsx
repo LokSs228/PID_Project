@@ -256,12 +256,16 @@ function TransferFunctionInput({
           <div className="mb-4 flex items-center gap-2">
             <h3 className="text-sm font-semibold text-slate-200">Simulační scénář a porucha</h3>
 
-            <div className="group relative cursor-help">
-              <div className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-500 text-[10px] font-bold text-slate-500 transition-colors hover:border-sky-400 hover:text-sky-400">
+            <div className="group relative">
+              <button
+                type="button"
+                aria-label="Informace o simulaci"
+                className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-500 text-[10px] font-bold text-slate-500 transition-colors hover:border-sky-400 hover:text-sky-400 focus:border-sky-400 focus:text-sky-400 focus:outline-none"
+              >
                 i
-              </div>
+              </button>
 
-              <div className="invisible absolute left-0 top-6 z-50 w-80 max-w-[calc(100vw-3rem)] rounded-xl border border-slate-700 bg-slate-800 p-4 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
+              <div className="invisible absolute left-1/2 top-6 z-50 w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-800 p-4 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 max-h-[70vh] overflow-y-auto">
                 <h4 className="mb-3 border-b border-slate-700 pb-1 text-xs font-bold uppercase text-sky-400">Struktura simulace</h4>
                 <div className="space-y-3 text-[11px] leading-relaxed text-slate-300">
                   <section>
