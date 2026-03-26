@@ -1,5 +1,5 @@
 def CHR_20_POT_P(K, T, L):
-    if K <= 0 or T <= 0 or L <= 0:
+    if K == 0 or T <= 0 or L <= 0:
         return None
     Kp_P = 0.7 * T / (K * L)
 

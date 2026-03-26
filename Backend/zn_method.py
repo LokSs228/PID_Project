@@ -1,6 +1,6 @@
 # zn_method.py
 def zn_method(K, T, L):
-    if K <= 0 or T <= 0 or L <= 0:
+    if K == 0 or T <= 0 or L <= 0:
         return None
 
     Kp_P = T / (K * L)

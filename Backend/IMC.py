@@ -1,5 +1,5 @@
 def IMC (K, T, L, alpha):
-    if K <= 0 or T <= 0:
+    if K == 0 or T <= 0:
         return None
     ratio = L / T
     if 0 <= ratio <= 2:
