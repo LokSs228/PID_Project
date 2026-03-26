@@ -2,6 +2,58 @@
 from control import step_response
 
 
+def _infer_delay_search_limit(y, max_n):
+    """
+    Conservative upper bound for delay search:
+    use the first significant output change and add a small guard.
+    """
+    y = np.asarray(y, dtype=float)
+    if y.size < 3:
+        return max_n
+
+    y0 = float(y[0])
+    span = float(np.max(np.abs(y - y0)))
+    if not np.isfinite(span) or span <= 1e-12:
+        return max_n
+
+    level_threshold = max(0.002 * span, 1e-9)
+    level_indices = np.flatnonzero(np.abs(y - y0) >= level_threshold)
+
+    diff = np.abs(np.diff(y))
+    slope_threshold = max(0.001 * span, 1e-10)
+    slope_indices = np.flatnonzero(diff >= slope_threshold)
+
+    candidates = []
+    if level_indices.size > 0:
+        candidates.append(int(level_indices[0]))
+    if slope_indices.size > 0:
+        candidates.append(int(slope_indices[0] + 1))
+
+    if not candidates:
+        return max_n
+
+    first_change = min(candidates)
+    guard = max(2, min(12, y.size // 80))
+    return max(1, min(max_n, first_change + guard))
+
+
+def _is_physical_input_coeffs(b1, b2, tol=1e-12):
+    """
+    Plausibility filter for ARX input coefficients.
+    Both coefficients must act in the same direction as their sum.
+    """
+    denom = b1 + b2
+    if not np.isfinite(denom) or abs(denom) <= tol:
+        return False
+
+    if b1 * denom < -tol:
+        return False
+    if b2 * denom < -tol:
+        return False
+
+    return True
+
+
 def _run_rls(y, u, n, lam=1.0, delta=1e6):
     """
     RLS estimation for ARX model:
@@ -46,7 +98,7 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
     return theta, mse
 
 
-def apro_FOPDT(system, downsample=4, max_delay_samples=300):
+def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.2):
     t, y = step_response(system)
 
     t = np.asarray(t, dtype=float)
@@ -77,6 +129,10 @@ def apro_FOPDT(system, downsample=4, max_delay_samples=300):
         max_delay_samples = len(y) // 3
 
     max_n = max(1, min(int(max_delay_samples), int(t[-1] / h)))
+    max_n = _infer_delay_search_limit(y, max_n)
+    response_horizon = max(float(t[-1]), h)
+    y_span = max(float(np.max(np.abs(y - y[0]))), 1e-12)
+    mse_scale = y_span * y_span
 
     best = None
 
@@ -102,23 +158,38 @@ def apro_FOPDT(system, downsample=4, max_delay_samples=300):
         if not np.isfinite(K):
             continue
 
+        if not _is_physical_input_coeffs(b1, b2):
+            continue
+
         denom = b1 + b2
 
         frac = (b2 / denom) if not np.isclose(denom, 0.0) else 0.0
+        frac = float(np.clip(frac, 0.0, 1.0))
 
         L = (n + frac) * h
 
         if not np.isfinite(L) or L < 0:
             continue
 
-        candidate = (mse, K, T, L, a1, b1, b2)
+        score = (mse / mse_scale) + float(delay_weight) * (L / response_horizon)
+        candidate = (score, mse, L, K, T, a1, b1, b2)
 
-        if best is None or candidate[0] < best[0]:
+        if best is None:
+            best = candidate
+            continue
+
+        if candidate[0] < best[0]:
+            best = candidate
+            continue
+
+        best_mse = best[1]
+        mse_tol = max(1e-12, 0.05 * best_mse)
+        if abs(candidate[1] - best_mse) <= mse_tol and candidate[2] < best[2]:
             best = candidate
 
     if best is None:
         raise ValueError("FOPDT identification did not converge.")
 
-    _, K, T, L, _, _, _ = best
+    _, _, L, K, T, _, _, _ = best
 
     return float(K), float(T), float(L)
