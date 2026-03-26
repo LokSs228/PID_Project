@@ -1,5 +1,6 @@
 ﻿import numpy as np
 from control import step_response
+from scipy.optimize import least_squares
 
 
 def _is_physical_input_coeffs(b1, b2, tol=1e-12):
@@ -24,7 +25,6 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
     RLS estimation for ARX model:
     y[k] = -a1*y[k-1] + b1*u[k-n] + b2*u[k-n-1]
     """
-
     theta = np.zeros(3, dtype=float)
     p_mat = np.eye(3, dtype=float) * delta
     valid_samples = 0
@@ -59,11 +59,77 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
         y_hat[k] = -theta[0] * y[k - 1] + theta[1] * u_kn + theta[2] * u_kn1
 
     mse = float(np.mean((y[1:] - y_hat[1:]) ** 2))
-
     return theta, mse
 
 
-def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
+def _fopdt_step_response(t, K, T, L):
+    """
+    Step response of FOPDT model:
+    y(t) = K * (1 - exp(-(t-L)/T)) for t >= L, else 0
+    """
+    t = np.asarray(t, dtype=float)
+    tau = np.maximum(t - L, 0.0)
+    y = K * (1.0 - np.exp(-tau / T))
+    y[t < L] = 0.0
+    return y
+
+
+def _refine_fopdt_nonlinear(t, y, K0, T0, L0, h, max_nfev=5000):
+    """
+    Nonlinear least-squares refinement of K, T, L.
+    Slower but typically more accurate than coarse ARX initialization.
+    """
+    t = np.asarray(t, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    y_scale = max(float(np.max(np.abs(y))), 1.0)
+    t_horizon = max(float(t[-1]), h)
+
+    k_low = -20.0 * y_scale
+    k_high = 20.0 * y_scale
+    t_low = max(h * 0.25, 1e-8)
+    t_high = max(10.0 * t_horizon, t_low * 10.0)
+    l_low = 0.0
+    l_high = t_horizon
+
+    x0 = np.array([float(K0), float(T0), float(L0)], dtype=float)
+    x0[0] = np.clip(x0[0], k_low, k_high)
+    x0[1] = np.clip(x0[1], t_low, t_high)
+    x0[2] = np.clip(x0[2], l_low, l_high)
+
+    def residuals(params):
+        K, T, L = params
+        y_hat = _fopdt_step_response(t, K, T, L)
+        return y_hat - y
+
+    result = least_squares(
+        residuals,
+        x0,
+        bounds=([k_low, t_low, l_low], [k_high, t_high, l_high]),
+        method="trf",
+        loss="soft_l1",
+        f_scale=max(1e-6, 0.01 * y_scale),
+        max_nfev=max_nfev,
+        xtol=1e-10,
+        ftol=1e-10,
+        gtol=1e-10,
+    )
+
+    if not result.success:
+        return None
+
+    K_opt, T_opt, L_opt = map(float, result.x)
+    if not (np.isfinite(K_opt) and np.isfinite(T_opt) and np.isfinite(L_opt)):
+        return None
+    if T_opt <= 0 or L_opt < 0:
+        return None
+
+    y_opt = _fopdt_step_response(t, K_opt, T_opt, L_opt)
+    mse_opt = float(np.mean((y - y_opt) ** 2))
+    return K_opt, T_opt, L_opt, mse_opt
+
+
+def apro_FOPDT(system, downsample=1, max_delay_samples=300, delay_weight=0.03):
     t, y = step_response(system)
 
     t = np.asarray(t, dtype=float)
@@ -101,9 +167,7 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
     best = None
 
     for n in range(max_n + 1):
-
         theta, mse = _run_rls(y, u, n)
-
         if theta is None:
             continue
 
@@ -113,12 +177,10 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
             continue
 
         T = -h / np.log(-a1)
-
         if not np.isfinite(T) or T <= 0:
             continue
 
         K = (b1 + b2) / (1.0 + a1)
-
         if not np.isfinite(K):
             continue
 
@@ -126,12 +188,10 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
             continue
 
         denom = b1 + b2
-
         frac = (b2 / denom) if not np.isclose(denom, 0.0) else 0.0
         frac = float(np.clip(frac, 0.0, 1.0))
 
         L = (n + frac) * h
-
         if not np.isfinite(L) or L < 0:
             continue
 
@@ -140,7 +200,8 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
         delay_ratio = L / response_horizon
         excess_delay = max(0.0, delay_ratio - 0.15)
         score = (mse / mse_scale) + float(delay_weight) * excess_delay
-        candidate = (score, mse, L, K, T, a1, b1, b2)
+
+        candidate = (score, mse, L, K, T)
 
         if best is None:
             best = candidate
@@ -158,6 +219,12 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
     if best is None:
         raise ValueError("FOPDT identification did not converge.")
 
-    _, _, L, K, T, _, _, _ = best
+    _, mse_coarse, L, K, T = best
+
+    refined = _refine_fopdt_nonlinear(t, y, K, T, L, h)
+    if refined is not None:
+        K_ref, T_ref, L_ref, mse_ref = refined
+        if mse_ref <= mse_coarse:
+            K, T, L = K_ref, T_ref, L_ref
 
     return float(K), float(T), float(L)
