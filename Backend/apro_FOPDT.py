@@ -2,41 +2,6 @@
 from control import step_response
 
 
-def _infer_delay_search_limit(y, max_n):
-    """
-    Conservative upper bound for delay search:
-    use the first significant output change and add a small guard.
-    """
-    y = np.asarray(y, dtype=float)
-    if y.size < 3:
-        return max_n
-
-    y0 = float(y[0])
-    span = float(np.max(np.abs(y - y0)))
-    if not np.isfinite(span) or span <= 1e-12:
-        return max_n
-
-    level_threshold = max(0.002 * span, 1e-9)
-    level_indices = np.flatnonzero(np.abs(y - y0) >= level_threshold)
-
-    diff = np.abs(np.diff(y))
-    slope_threshold = max(0.001 * span, 1e-10)
-    slope_indices = np.flatnonzero(diff >= slope_threshold)
-
-    candidates = []
-    if level_indices.size > 0:
-        candidates.append(int(level_indices[0]))
-    if slope_indices.size > 0:
-        candidates.append(int(slope_indices[0] + 1))
-
-    if not candidates:
-        return max_n
-
-    first_change = min(candidates)
-    guard = max(2, min(12, y.size // 80))
-    return max(1, min(max_n, first_change + guard))
-
-
 def _is_physical_input_coeffs(b1, b2, tol=1e-12):
     """
     Plausibility filter for ARX input coefficients.
@@ -98,7 +63,7 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
     return theta, mse
 
 
-def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.2):
+def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.03):
     t, y = step_response(system)
 
     t = np.asarray(t, dtype=float)
@@ -129,7 +94,6 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.2):
         max_delay_samples = len(y) // 3
 
     max_n = max(1, min(int(max_delay_samples), int(t[-1] / h)))
-    max_n = _infer_delay_search_limit(y, max_n)
     response_horizon = max(float(t[-1]), h)
     y_span = max(float(np.max(np.abs(y - y[0]))), 1e-12)
     mse_scale = y_span * y_span
@@ -171,7 +135,11 @@ def apro_FOPDT(system, downsample=2, max_delay_samples=300, delay_weight=0.2):
         if not np.isfinite(L) or L < 0:
             continue
 
-        score = (mse / mse_scale) + float(delay_weight) * (L / response_horizon)
+        # Soft regularization: do not penalize realistic delays,
+        # penalize only excessively large delays relative to horizon.
+        delay_ratio = L / response_horizon
+        excess_delay = max(0.0, delay_ratio - 0.15)
+        score = (mse / mse_scale) + float(delay_weight) * excess_delay
         candidate = (score, mse, L, K, T, a1, b1, b2)
 
         if best is None:
