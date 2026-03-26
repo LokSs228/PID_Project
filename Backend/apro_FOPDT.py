@@ -1,6 +1,45 @@
-﻿import numpy as np
+import numpy as np
+from collections import OrderedDict
+from threading import Lock
 from control import step_response
 from scipy.optimize import least_squares
+
+_FOPDT_CACHE_MAX = 256
+_fopdt_cache = OrderedDict()
+_fopdt_cache_lock = Lock()
+_L_ZERO_THRESHOLD_SAMPLES = 0.5
+_FOPDT_ULTRA_VERSION = 2
+
+
+def _coeff_signature(poly, ndigits=12):
+    arr = np.asarray(poly, dtype=complex).ravel()
+    arr = np.real_if_close(arr, tol=1000)
+    if np.iscomplexobj(arr):
+        return tuple((round(float(v.real), ndigits), round(float(v.imag), ndigits)) for v in arr)
+    return tuple(round(float(v), ndigits) for v in arr)
+
+
+def _system_signature(system):
+    # Project uses SISO transfer functions.
+    num = system.num[0][0]
+    den = system.den[0][0]
+    return _coeff_signature(num), _coeff_signature(den)
+
+
+def _cache_get(cache_key):
+    with _fopdt_cache_lock:
+        value = _fopdt_cache.get(cache_key)
+        if value is not None:
+            _fopdt_cache.move_to_end(cache_key)
+        return value
+
+
+def _cache_set(cache_key, value):
+    with _fopdt_cache_lock:
+        _fopdt_cache[cache_key] = value
+        _fopdt_cache.move_to_end(cache_key)
+        while len(_fopdt_cache) > _FOPDT_CACHE_MAX:
+            _fopdt_cache.popitem(last=False)
 
 
 def _run_rls(y, u, n, lam=1.0, delta=1e6):
@@ -54,6 +93,81 @@ def _fopdt_step_response(t, K, T, L):
     return y
 
 
+def _first_crossing_time(t, y, target):
+    """Return first crossing time of y(t) with interpolation."""
+    t = np.asarray(t, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    if len(t) < 2:
+        return None
+
+    if target >= y[0]:
+        idx = np.where(y >= target)[0]
+    else:
+        idx = np.where(y <= target)[0]
+
+    if len(idx) == 0:
+        return None
+
+    i = int(idx[0])
+    if i <= 0:
+        return float(t[0])
+
+    t0, t1 = float(t[i - 1]), float(t[i])
+    y0, y1 = float(y[i - 1]), float(y[i])
+
+    if np.isclose(y1, y0):
+        return t1
+
+    alpha = (target - y0) / (y1 - y0)
+    alpha = float(np.clip(alpha, 0.0, 1.0))
+    return t0 + alpha * (t1 - t0)
+
+
+def _fraction_seeds(t, y):
+    """
+    Generate initial (K, T, L) guesses using response-level crossings.
+    For FOPDT: t_f = L - T*ln(1-f).
+    """
+    t = np.asarray(t, dtype=float)
+    y = np.asarray(y, dtype=float)
+
+    if len(y) < 8:
+        return []
+
+    tail_n = max(4, len(y) // 12)
+    k_tail = float(np.median(y[-tail_n:]))
+    if not np.isfinite(k_tail) or abs(k_tail) < 1e-12:
+        return []
+
+    frac_pairs = [
+        (0.10, 0.63),
+        (0.20, 0.80),
+        (0.28, 0.63),
+    ]
+
+    seeds = []
+    for f1, f2 in frac_pairs:
+        y1 = k_tail * f1
+        y2 = k_tail * f2
+        t1 = _first_crossing_time(t, y, y1)
+        t2 = _first_crossing_time(t, y, y2)
+        if t1 is None or t2 is None or not (t2 > t1):
+            continue
+
+        denom = np.log((1.0 - f1) / (1.0 - f2))
+        if np.isclose(denom, 0.0):
+            continue
+
+        T_est = (t2 - t1) / denom
+        L_est = t1 + T_est * np.log(1.0 - f1)
+
+        if np.isfinite(T_est) and T_est > 0 and np.isfinite(L_est):
+            seeds.append(np.array([k_tail, T_est, max(0.0, L_est)], dtype=float))
+
+    return seeds
+
+
 def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
     """
     Deep nonlinear refinement of K, T, L.
@@ -64,50 +178,95 @@ def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
 
     y_scale = max(float(np.max(np.abs(y))), 1.0)
     t_end = max(float(t[-1]), h)
+    dy = np.gradient(y, t, edge_order=1)
+    dy_scale = max(float(np.max(np.abs(dy))), y_scale / max(t_end, h), 1e-6)
+    w_time = 0.45 + 0.55 * np.exp(-t / max(0.2 * t_end, h))
 
     # Broad bounds (not restrictive for practical cases)
     k_span = max(20.0 * y_scale, abs(float(K0)) * 8.0 + 1.0)
     lb = np.array([-k_span, max(1e-9, h * 0.05), 0.0], dtype=float)
     ub = np.array([k_span, max(80.0 * t_end, h * 10.0), max(2.0 * t_end, h)], dtype=float)
 
-    starts = [
-        np.array([K0, T0, L0], dtype=float),
-        np.array([K0 * 0.8, T0 * 0.8, L0], dtype=float),
-        np.array([K0 * 1.2, T0 * 1.2, L0], dtype=float),
-        np.array([K0, T0 * 0.6, max(0.0, L0 - h)], dtype=float),
-        np.array([K0, T0 * 1.6, L0 + h], dtype=float),
-        np.array([K0 * 0.6, T0 * 1.4, max(0.0, L0 - 2.0 * h)], dtype=float),
-        np.array([K0 * 1.4, T0 * 0.7, L0 + 2.0 * h], dtype=float),
-    ]
+    starts = []
+    seen = set()
+
+    def add_start(vec):
+        clipped = np.clip(np.asarray(vec, dtype=float), lb, ub)
+        key = tuple(round(float(v), 10) for v in clipped)
+        if key in seen:
+            return
+        seen.add(key)
+        starts.append(clipped)
+
+    add_start([K0, T0, L0])
+    add_start([K0 * 0.8, T0 * 0.8, L0])
+    add_start([K0 * 1.2, T0 * 1.2, L0])
+    add_start([K0, T0 * 0.6, max(0.0, L0 - h)])
+    add_start([K0, T0 * 1.6, L0 + h])
+    add_start([K0 * 0.6, T0 * 1.4, max(0.0, L0 - 2.0 * h)])
+    add_start([K0 * 1.4, T0 * 0.7, L0 + 2.0 * h])
+    add_start([K0 * 1.0, T0 * 0.45, max(0.0, L0 - 3.0 * h)])
+    add_start([K0 * 1.0, T0 * 2.1, L0 + 3.0 * h])
+
+    for seed in _fraction_seeds(t, y):
+        add_start(seed)
 
     best = None
 
-    def residuals(params):
+    def residuals_focus(params):
+        K, T, L = params
+        y_model = _fopdt_step_response(t, K, T, L)
+        dy_model = np.gradient(y_model, t, edge_order=1)
+        r_y = (y_model - y) / y_scale
+        r_d = (dy_model - dy) / dy_scale
+        return np.concatenate((w_time * r_y, 0.35 * w_time * r_d))
+
+    def residuals_mse(params):
         K, T, L = params
         return _fopdt_step_response(t, K, T, L) - y
 
     for x0 in starts:
-        x0 = np.clip(x0, lb, ub)
         try:
-            result = least_squares(
-                residuals,
+            result_focus = least_squares(
+                residuals_focus,
                 x0,
                 bounds=(lb, ub),
                 method="trf",
                 loss="soft_l1",
-                f_scale=max(1e-6, 0.005 * y_scale),
-                max_nfev=25000,
-                xtol=1e-11,
-                ftol=1e-11,
-                gtol=1e-11,
+                f_scale=0.08,
+                max_nfev=45000,
+                xtol=1e-12,
+                ftol=1e-12,
+                gtol=1e-12,
             )
         except Exception:
             continue
 
-        if not result.success:
+        if not result_focus.success:
             continue
 
-        K_opt, T_opt, L_opt = map(float, result.x)
+        x_mid = np.clip(np.asarray(result_focus.x, dtype=float), lb, ub)
+
+        try:
+            result_mse = least_squares(
+                residuals_mse,
+                x_mid,
+                bounds=(lb, ub),
+                method="trf",
+                loss="linear",
+                max_nfev=25000,
+                xtol=1e-13,
+                ftol=1e-13,
+                gtol=1e-13,
+            )
+            if result_mse.success:
+                x_final = np.asarray(result_mse.x, dtype=float)
+            else:
+                x_final = x_mid
+        except Exception:
+            x_final = x_mid
+
+        K_opt, T_opt, L_opt = map(float, x_final)
         if not (np.isfinite(K_opt) and np.isfinite(T_opt) and np.isfinite(L_opt)):
             continue
 
@@ -122,14 +281,20 @@ def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
 
 
 def apro_FOPDT(system, downsample=1, max_delay_samples=300):
+    downsample = int(downsample)
+    if downsample < 1:
+        raise ValueError("downsample must be >= 1.")
+
+    delay_key = None if max_delay_samples is None else int(max_delay_samples)
+    cache_key = (_FOPDT_ULTRA_VERSION, _system_signature(system), downsample, delay_key)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     t, y = step_response(system)
 
     t = np.asarray(t, dtype=float)
     y = np.asarray(y, dtype=float)
-
-    downsample = int(downsample)
-    if downsample < 1:
-        raise ValueError("downsample must be >= 1.")
 
     if downsample > 1:
         t = t[::downsample]
@@ -195,4 +360,10 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300):
         if mse_ref <= mse_coarse:
             K, T, L = K_ref, T_ref, L_ref
 
-    return float(K), float(T), float(L)
+    # Delays smaller than half of one identified sampling step are treated as zero.
+    if L < (_L_ZERO_THRESHOLD_SAMPLES * h):
+        L = 0.0
+
+    result = (float(K), float(T), float(L))
+    _cache_set(cache_key, result)
+    return result

@@ -189,7 +189,12 @@ def calculate():
         system = base_system * delay
 
     # --- 3. Inicializace proměnných pro výsledek ---
-    points = []
+    t_resp = None
+    try:
+        t_resp, y_resp = step_response(system)
+        points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t_resp, y_resp)]
+    except Exception:
+        points = []
     pid_coeffs = {}
     
     # Inicializujeme nulami
@@ -248,7 +253,10 @@ def calculate():
             apro_num_delay, apro_den_delay = pade(L_fopdt, 4)
             apro_FOPDT_system *= tf(apro_num_delay, apro_den_delay)
         try:
-            t_apro_resp, y_apro_resp = step_response(apro_FOPDT_system)
+            if t_resp is not None and len(t_resp) > 1:
+                t_apro_resp, y_apro_resp = step_response(apro_FOPDT_system, T=t_resp)
+            else:
+                t_apro_resp, y_apro_resp = step_response(apro_FOPDT_system)
             apro_points = [
                 {'t': float(ti), 'y': float(yi)}
                 for ti, yi in zip(t_apro_resp, y_apro_resp)
@@ -271,12 +279,6 @@ def calculate():
         
     except Exception as e:
         return jsonify({'error': f'Ошибка симуляции: {str(e)}'}), 500
-    # Určení odezvy otevřené smyčky (Open Loop)
-    try:
-        t_resp, y_resp = step_response(system)
-        points = [{'t': float(ti), 'y': float(yi)} for ti, yi in zip(t_resp, y_resp)]
-    except Exception:
-        points = []
 
     # --- 6. Sestavení odpovědi ---
     return jsonify({
