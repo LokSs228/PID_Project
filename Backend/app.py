@@ -210,7 +210,7 @@ def calculate():
     # Pokud metoda NENÍ genetická, téměř vždy potřebujeme aproximaci FOPDT
     if Method != "GA":
         try:
-            K_ap, T_ap, L_ap = apro_FOPDT(system)
+            K_ap, T_ap, L_ap = apro_FOPDT(system, fixed_k=K_val)
             # Aktualizujeme proměnné, které půjdou do metod výpočtu PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
         except Exception as e:
@@ -307,3 +307,4 @@ if __name__ == '__main__':
     port = int(os.getenv("PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "0") == "1"
     app.run(host='0.0.0.0', port=port, debug=debug)
+

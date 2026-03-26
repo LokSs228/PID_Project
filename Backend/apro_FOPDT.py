@@ -8,7 +8,7 @@ _FOPDT_CACHE_MAX = 256
 _fopdt_cache = OrderedDict()
 _fopdt_cache_lock = Lock()
 _L_ZERO_THRESHOLD_SAMPLES = 0.5
-_FOPDT_ULTRA_VERSION = 2
+_FOPDT_ULTRA_VERSION = 4
 
 
 def _coeff_signature(poly, ndigits=12):
@@ -124,9 +124,33 @@ def _first_crossing_time(t, y, target):
     return t0 + alpha * (t1 - t0)
 
 
-def _fraction_seeds(t, y):
+def _estimate_fixed_gain(y):
+    """Estimate fixed static gain K from tail of the step response."""
+    y = np.asarray(y, dtype=float)
+
+    if len(y) == 0:
+        raise ValueError("Empty response for gain estimation.")
+
+    tail_n = max(6, len(y) // 10)
+    k_tail = float(np.median(y[-tail_n:]))
+    if np.isfinite(k_tail) and abs(k_tail) > 1e-10:
+        return k_tail
+
+    k_last = float(y[-1])
+    if np.isfinite(k_last) and abs(k_last) > 1e-10:
+        return k_last
+
+    peak_idx = int(np.argmax(np.abs(y)))
+    k_peak = float(y[peak_idx])
+    if np.isfinite(k_peak) and abs(k_peak) > 1e-10:
+        return k_peak
+
+    raise ValueError("Unable to estimate non-zero static gain K.")
+
+
+def _fraction_seeds(t, y, K_fixed):
     """
-    Generate initial (K, T, L) guesses using response-level crossings.
+    Generate initial (T, L) guesses using response-level crossings.
     For FOPDT: t_f = L - T*ln(1-f).
     """
     t = np.asarray(t, dtype=float)
@@ -134,10 +158,7 @@ def _fraction_seeds(t, y):
 
     if len(y) < 8:
         return []
-
-    tail_n = max(4, len(y) // 12)
-    k_tail = float(np.median(y[-tail_n:]))
-    if not np.isfinite(k_tail) or abs(k_tail) < 1e-12:
+    if not np.isfinite(K_fixed) or abs(K_fixed) < 1e-12:
         return []
 
     frac_pairs = [
@@ -148,8 +169,8 @@ def _fraction_seeds(t, y):
 
     seeds = []
     for f1, f2 in frac_pairs:
-        y1 = k_tail * f1
-        y2 = k_tail * f2
+        y1 = K_fixed * f1
+        y2 = K_fixed * f2
         t1 = _first_crossing_time(t, y, y1)
         t2 = _first_crossing_time(t, y, y2)
         if t1 is None or t2 is None or not (t2 > t1):
@@ -163,14 +184,14 @@ def _fraction_seeds(t, y):
         L_est = t1 + T_est * np.log(1.0 - f1)
 
         if np.isfinite(T_est) and T_est > 0 and np.isfinite(L_est):
-            seeds.append(np.array([k_tail, T_est, max(0.0, L_est)], dtype=float))
+            seeds.append(np.array([T_est, max(0.0, L_est)], dtype=float))
 
     return seeds
 
 
-def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
+def _ultra_refine_fopdt(t, y, K_fixed, T0, L0, h):
     """
-    Deep nonlinear refinement of K, T, L.
+    Deep nonlinear refinement of T, L with fixed K.
     This stage is intentionally slower, but usually more accurate.
     """
     t = np.asarray(t, dtype=float)
@@ -182,10 +203,8 @@ def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
     dy_scale = max(float(np.max(np.abs(dy))), y_scale / max(t_end, h), 1e-6)
     w_time = 0.45 + 0.55 * np.exp(-t / max(0.2 * t_end, h))
 
-    # Broad bounds (not restrictive for practical cases)
-    k_span = max(20.0 * y_scale, abs(float(K0)) * 8.0 + 1.0)
-    lb = np.array([-k_span, max(1e-9, h * 0.05), 0.0], dtype=float)
-    ub = np.array([k_span, max(80.0 * t_end, h * 10.0), max(2.0 * t_end, h)], dtype=float)
+    lb = np.array([max(1e-9, h * 0.05), 0.0], dtype=float)
+    ub = np.array([max(80.0 * t_end, h * 10.0), max(2.0 * t_end, h)], dtype=float)
 
     starts = []
     seen = set()
@@ -198,32 +217,30 @@ def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
         seen.add(key)
         starts.append(clipped)
 
-    add_start([K0, T0, L0])
-    add_start([K0 * 0.8, T0 * 0.8, L0])
-    add_start([K0 * 1.2, T0 * 1.2, L0])
-    add_start([K0, T0 * 0.6, max(0.0, L0 - h)])
-    add_start([K0, T0 * 1.6, L0 + h])
-    add_start([K0 * 0.6, T0 * 1.4, max(0.0, L0 - 2.0 * h)])
-    add_start([K0 * 1.4, T0 * 0.7, L0 + 2.0 * h])
-    add_start([K0 * 1.0, T0 * 0.45, max(0.0, L0 - 3.0 * h)])
-    add_start([K0 * 1.0, T0 * 2.1, L0 + 3.0 * h])
+    add_start([T0, L0])
+    add_start([T0 * 0.8, L0])
+    add_start([T0 * 1.2, L0])
+    add_start([T0 * 0.6, max(0.0, L0 - h)])
+    add_start([T0 * 1.6, L0 + h])
+    add_start([T0 * 0.45, max(0.0, L0 - 3.0 * h)])
+    add_start([T0 * 2.1, L0 + 3.0 * h])
 
-    for seed in _fraction_seeds(t, y):
+    for seed in _fraction_seeds(t, y, K_fixed):
         add_start(seed)
 
     best = None
 
     def residuals_focus(params):
-        K, T, L = params
-        y_model = _fopdt_step_response(t, K, T, L)
+        T, L = params
+        y_model = _fopdt_step_response(t, K_fixed, T, L)
         dy_model = np.gradient(y_model, t, edge_order=1)
         r_y = (y_model - y) / y_scale
         r_d = (dy_model - dy) / dy_scale
         return np.concatenate((w_time * r_y, 0.35 * w_time * r_d))
 
     def residuals_mse(params):
-        K, T, L = params
-        return _fopdt_step_response(t, K, T, L) - y
+        T, L = params
+        return _fopdt_step_response(t, K_fixed, T, L) - y
 
     for x0 in starts:
         try:
@@ -266,27 +283,28 @@ def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
         except Exception:
             x_final = x_mid
 
-        K_opt, T_opt, L_opt = map(float, x_final)
-        if not (np.isfinite(K_opt) and np.isfinite(T_opt) and np.isfinite(L_opt)):
+        T_opt, L_opt = map(float, x_final)
+        if not (np.isfinite(T_opt) and np.isfinite(L_opt)):
             continue
 
-        y_opt = _fopdt_step_response(t, K_opt, T_opt, L_opt)
+        y_opt = _fopdt_step_response(t, K_fixed, T_opt, L_opt)
         mse_opt = float(np.mean((y - y_opt) ** 2))
 
-        candidate = (mse_opt, K_opt, T_opt, L_opt)
+        candidate = (mse_opt, T_opt, L_opt)
         if best is None or candidate[0] < best[0]:
             best = candidate
 
     return best
 
 
-def apro_FOPDT(system, downsample=1, max_delay_samples=300):
+def apro_FOPDT(system, downsample=1, max_delay_samples=300, fixed_k=None):
     downsample = int(downsample)
     if downsample < 1:
         raise ValueError("downsample must be >= 1.")
 
     delay_key = None if max_delay_samples is None else int(max_delay_samples)
-    cache_key = (_FOPDT_ULTRA_VERSION, _system_signature(system), downsample, delay_key)
+    fixed_k_key = None if fixed_k is None else round(float(fixed_k), 12)
+    cache_key = (_FOPDT_ULTRA_VERSION, _system_signature(system), downsample, delay_key, fixed_k_key)
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
@@ -311,6 +329,12 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300):
 
     h = float(np.median(positive_dt))
     u = np.ones_like(y)
+    if fixed_k is None:
+        K_fixed = _estimate_fixed_gain(y)
+    else:
+        K_fixed = float(fixed_k)
+        if not np.isfinite(K_fixed) or abs(K_fixed) < 1e-12:
+            raise ValueError("fixed_k must be finite and non-zero.")
 
     if max_delay_samples is None:
         max_delay_samples = len(y) // 3
@@ -320,7 +344,7 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300):
     best = None
 
     for n in range(max_n + 1):
-        theta, mse = _run_rls(y, u, n)
+        theta, _ = _run_rls(y, u, n)
         if theta is None:
             continue
 
@@ -333,10 +357,6 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300):
         if not np.isfinite(T) or T <= 0:
             continue
 
-        K = (b1 + b2) / (1.0 + a1)
-        if not np.isfinite(K):
-            continue
-
         denom = b1 + b2
         frac = (b2 / denom) if not np.isclose(denom, 0.0) else 0.0
 
@@ -344,26 +364,28 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300):
         if not np.isfinite(L) or L < 0:
             continue
 
-        candidate = (mse, K, T, L)
+        y_model = _fopdt_step_response(t, K_fixed, T, L)
+        mse_model = float(np.mean((y - y_model) ** 2))
+        candidate = (mse_model, T, L)
         if best is None or candidate[0] < best[0]:
             best = candidate
 
     if best is None:
         raise ValueError("FOPDT identification did not converge.")
 
-    mse_coarse, K, T, L = best
+    mse_coarse, T, L = best
 
-    # Ultra mode by default: always run deep nonlinear refinement.
-    refined = _ultra_refine_fopdt(t, y, K, T, L, h)
+    # Ultra mode by default: refine only T, L while keeping K fixed.
+    refined = _ultra_refine_fopdt(t, y, K_fixed, T, L, h)
     if refined is not None:
-        mse_ref, K_ref, T_ref, L_ref = refined
+        mse_ref, T_ref, L_ref = refined
         if mse_ref <= mse_coarse:
-            K, T, L = K_ref, T_ref, L_ref
+            T, L = T_ref, L_ref
 
     # Delays smaller than half of one identified sampling step are treated as zero.
     if L < (_L_ZERO_THRESHOLD_SAMPLES * h):
         L = 0.0
 
-    result = (float(K), float(T), float(L))
+    result = (float(K_fixed), float(T), float(L))
     _cache_set(cache_key, result)
     return result
