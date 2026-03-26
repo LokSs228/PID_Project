@@ -3,23 +3,6 @@ from control import step_response
 from scipy.optimize import least_squares
 
 
-def _is_physical_input_coeffs(b1, b2, tol=1e-12):
-    """
-    Plausibility filter for ARX input coefficients.
-    Both coefficients must act in the same direction as their sum.
-    """
-    denom = b1 + b2
-    if not np.isfinite(denom) or abs(denom) <= tol:
-        return False
-
-    if b1 * denom < -tol:
-        return False
-    if b2 * denom < -tol:
-        return False
-
-    return True
-
-
 def _run_rls(y, u, n, lam=1.0, delta=1e6):
     """
     RLS estimation for ARX model:
@@ -63,10 +46,7 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
 
 
 def _fopdt_step_response(t, K, T, L):
-    """
-    Step response of FOPDT model:
-    y(t) = K * (1 - exp(-(t-L)/T)) for t >= L, else 0
-    """
+    """Step response of FOPDT model."""
     t = np.asarray(t, dtype=float)
     tau = np.maximum(t - L, 0.0)
     y = K * (1.0 - np.exp(-tau / T))
@@ -74,62 +54,74 @@ def _fopdt_step_response(t, K, T, L):
     return y
 
 
-def _refine_fopdt_nonlinear(t, y, K0, T0, L0, h, max_nfev=5000):
+def _ultra_refine_fopdt(t, y, K0, T0, L0, h):
     """
-    Nonlinear least-squares refinement of K, T, L.
-    Slower but typically more accurate than coarse ARX initialization.
+    Deep nonlinear refinement of K, T, L.
+    This stage is intentionally slower, but usually more accurate.
     """
     t = np.asarray(t, dtype=float)
     y = np.asarray(y, dtype=float)
 
     y_scale = max(float(np.max(np.abs(y))), 1.0)
-    t_horizon = max(float(t[-1]), h)
+    t_end = max(float(t[-1]), h)
 
-    k_low = -20.0 * y_scale
-    k_high = 20.0 * y_scale
-    t_low = max(h * 0.25, 1e-8)
-    t_high = max(10.0 * t_horizon, t_low * 10.0)
-    l_low = 0.0
-    l_high = t_horizon
+    # Broad bounds (not restrictive for practical cases)
+    k_span = max(20.0 * y_scale, abs(float(K0)) * 8.0 + 1.0)
+    lb = np.array([-k_span, max(1e-9, h * 0.05), 0.0], dtype=float)
+    ub = np.array([k_span, max(80.0 * t_end, h * 10.0), max(2.0 * t_end, h)], dtype=float)
 
-    x0 = np.array([float(K0), float(T0), float(L0)], dtype=float)
-    x0[0] = np.clip(x0[0], k_low, k_high)
-    x0[1] = np.clip(x0[1], t_low, t_high)
-    x0[2] = np.clip(x0[2], l_low, l_high)
+    starts = [
+        np.array([K0, T0, L0], dtype=float),
+        np.array([K0 * 0.8, T0 * 0.8, L0], dtype=float),
+        np.array([K0 * 1.2, T0 * 1.2, L0], dtype=float),
+        np.array([K0, T0 * 0.6, max(0.0, L0 - h)], dtype=float),
+        np.array([K0, T0 * 1.6, L0 + h], dtype=float),
+        np.array([K0 * 0.6, T0 * 1.4, max(0.0, L0 - 2.0 * h)], dtype=float),
+        np.array([K0 * 1.4, T0 * 0.7, L0 + 2.0 * h], dtype=float),
+    ]
+
+    best = None
 
     def residuals(params):
         K, T, L = params
-        y_hat = _fopdt_step_response(t, K, T, L)
-        return y_hat - y
+        return _fopdt_step_response(t, K, T, L) - y
 
-    result = least_squares(
-        residuals,
-        x0,
-        bounds=([k_low, t_low, l_low], [k_high, t_high, l_high]),
-        method="trf",
-        loss="soft_l1",
-        f_scale=max(1e-6, 0.01 * y_scale),
-        max_nfev=max_nfev,
-        xtol=1e-10,
-        ftol=1e-10,
-        gtol=1e-10,
-    )
+    for x0 in starts:
+        x0 = np.clip(x0, lb, ub)
+        try:
+            result = least_squares(
+                residuals,
+                x0,
+                bounds=(lb, ub),
+                method="trf",
+                loss="soft_l1",
+                f_scale=max(1e-6, 0.005 * y_scale),
+                max_nfev=25000,
+                xtol=1e-11,
+                ftol=1e-11,
+                gtol=1e-11,
+            )
+        except Exception:
+            continue
 
-    if not result.success:
-        return None
+        if not result.success:
+            continue
 
-    K_opt, T_opt, L_opt = map(float, result.x)
-    if not (np.isfinite(K_opt) and np.isfinite(T_opt) and np.isfinite(L_opt)):
-        return None
-    if T_opt <= 0 or L_opt < 0:
-        return None
+        K_opt, T_opt, L_opt = map(float, result.x)
+        if not (np.isfinite(K_opt) and np.isfinite(T_opt) and np.isfinite(L_opt)):
+            continue
 
-    y_opt = _fopdt_step_response(t, K_opt, T_opt, L_opt)
-    mse_opt = float(np.mean((y - y_opt) ** 2))
-    return K_opt, T_opt, L_opt, mse_opt
+        y_opt = _fopdt_step_response(t, K_opt, T_opt, L_opt)
+        mse_opt = float(np.mean((y - y_opt) ** 2))
+
+        candidate = (mse_opt, K_opt, T_opt, L_opt)
+        if best is None or candidate[0] < best[0]:
+            best = candidate
+
+    return best
 
 
-def apro_FOPDT(system, downsample=1, max_delay_samples=300, delay_weight=0.03):
+def apro_FOPDT(system, downsample=1, max_delay_samples=300):
     t, y = step_response(system)
 
     t = np.asarray(t, dtype=float)
@@ -153,16 +145,12 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300, delay_weight=0.03):
         raise ValueError("Unable to infer discretization step from response time axis.")
 
     h = float(np.median(positive_dt))
-
     u = np.ones_like(y)
 
     if max_delay_samples is None:
         max_delay_samples = len(y) // 3
 
     max_n = max(1, min(int(max_delay_samples), int(t[-1] / h)))
-    response_horizon = max(float(t[-1]), h)
-    y_span = max(float(np.max(np.abs(y - y[0]))), 1e-12)
-    mse_scale = y_span * y_span
 
     best = None
 
@@ -184,46 +172,26 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300, delay_weight=0.03):
         if not np.isfinite(K):
             continue
 
-        if not _is_physical_input_coeffs(b1, b2):
-            continue
-
         denom = b1 + b2
         frac = (b2 / denom) if not np.isclose(denom, 0.0) else 0.0
-        frac = float(np.clip(frac, 0.0, 1.0))
 
         L = (n + frac) * h
         if not np.isfinite(L) or L < 0:
             continue
 
-        # Soft regularization: do not penalize realistic delays,
-        # penalize only excessively large delays relative to horizon.
-        delay_ratio = L / response_horizon
-        excess_delay = max(0.0, delay_ratio - 0.15)
-        score = (mse / mse_scale) + float(delay_weight) * excess_delay
-
-        candidate = (score, mse, L, K, T)
-
-        if best is None:
-            best = candidate
-            continue
-
-        if candidate[0] < best[0]:
-            best = candidate
-            continue
-
-        best_mse = best[1]
-        mse_tol = max(1e-12, 0.05 * best_mse)
-        if abs(candidate[1] - best_mse) <= mse_tol and candidate[2] < best[2]:
+        candidate = (mse, K, T, L)
+        if best is None or candidate[0] < best[0]:
             best = candidate
 
     if best is None:
         raise ValueError("FOPDT identification did not converge.")
 
-    _, mse_coarse, L, K, T = best
+    mse_coarse, K, T, L = best
 
-    refined = _refine_fopdt_nonlinear(t, y, K, T, L, h)
+    # Ultra mode by default: always run deep nonlinear refinement.
+    refined = _ultra_refine_fopdt(t, y, K, T, L, h)
     if refined is not None:
-        K_ref, T_ref, L_ref, mse_ref = refined
+        mse_ref, K_ref, T_ref, L_ref = refined
         if mse_ref <= mse_coarse:
             K, T, L = K_ref, T_ref, L_ref
 
