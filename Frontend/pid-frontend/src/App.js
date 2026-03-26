@@ -8,6 +8,7 @@ import MetricsTable from './MetricsTable';
 function App() {
   const [pidData, setPidData] = useState(null);
   const [stepPoints, setStepPoints] = useState(null);
+  const [approxModel, setApproxModel] = useState(null);
   const [sim_points, setSimParams] = useState(null);
   const [y0, setY0] = useState(null);
   const [method, setMethod] = useState('ZN');
@@ -23,6 +24,7 @@ function App() {
     setIsLoading(true);
     setPidData(null);
     setStepPoints(null);
+    setApproxModel(null);
     setSimParams(null);
     setY0(null);
     setMetrics(null);
@@ -38,6 +40,11 @@ function App() {
       points: result.step_response,
       apro_points: result.apro_step_response || [],
     });
+    setApproxModel(
+      result.K !== undefined && result.T !== undefined && result.L !== undefined
+        ? { K: result.K, T: result.T, L: result.L }
+        : null
+    );
     setSimParams(result.sim_points);
     setY0(result.y0);
     setMetrics(
@@ -215,7 +222,7 @@ function App() {
               <section className={`${panelClass} lg:col-span-8`}>
                 <h2 className={sectionLabel}>Přechodová charakteristika systému</h2>
                 <div className="h-[320px] sm:h-[420px]">
-                  <Step points={stepPoints} />
+                  <Step points={stepPoints} approxModel={approxModel} />
                 </div>
               </section>
             </div>
