@@ -210,7 +210,7 @@ def calculate():
     # Pokud metoda NENÍ genetická, téměř vždy potřebujeme aproximaci FOPDT
     if Method != "GA":
         try:
-            K_ap, T_ap, L_ap = apro_FOPDT(system, fixed_k=K_val, fixed_l=L_val)
+            K_ap, T_ap, L_ap = apro_FOPDT(system, fixed_k=K_val)
             # Aktualizujeme proměnné, které půjdou do metod výpočtu PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
         except Exception as e:

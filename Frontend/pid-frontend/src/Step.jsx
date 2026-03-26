@@ -54,9 +54,6 @@ function Step({ points, approxModel }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    layout: {
-      padding: { top: 6, right: 10, bottom: 2, left: 4 },
-    },
     interaction: {
       mode: 'nearest',
       intersect: false,
@@ -84,22 +81,20 @@ function Step({ points, approxModel }) {
     scales: {
       x: {
         type: 'linear',
-        grace: '2%',
         title: { display: true, text: 'Čas [s]', color: '#94a3b8', font: { size: 11, weight: '600' } },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#94a3b8', maxTicksLimit: 8 },
+        ticks: { color: '#94a3b8' },
       },
       y: {
-        grace: '6%',
         title: { display: true, text: 'Amplituda y(t)', color: '#94a3b8', font: { size: 11, weight: '600' } },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#94a3b8', maxTicksLimit: 7 },
+        ticks: { color: '#94a3b8' },
       },
     },
   };
 
   return (
-    <div className="h-full w-full overflow-hidden">
+    <div className="h-full min-h-[340px] w-full overflow-hidden">
       {showApproxParams && (
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
           <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-300">Aproximovaný FOPDT model</div>

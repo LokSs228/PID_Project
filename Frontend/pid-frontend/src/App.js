@@ -221,7 +221,7 @@ function App() {
 
               <section className={`${panelClass} lg:col-span-8`}>
                 <h2 className={sectionLabel}>Přechodová charakteristika systému</h2>
-                <div className="h-[320px] sm:h-[420px]">
+                <div className="h-[360px] sm:h-[420px]">
                   <Step points={stepPoints} approxModel={approxModel} />
                 </div>
               </section>
