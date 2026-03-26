@@ -2,48 +2,6 @@
 from control import step_response
 
 
-def _infer_delay_search_limit(y, max_n):
-    """
-    Estimate a practical upper bound for delay search from the first
-    significant output change.
-    """
-    y = np.asarray(y, dtype=float)
-    if y.size < 3:
-        return max_n
-
-    y0 = float(y[0])
-    span = float(np.max(np.abs(y - y0)))
-    if not np.isfinite(span) or span <= 1e-12:
-        return max_n
-
-    threshold = max(0.01 * span, 1e-9)
-    change_indices = np.flatnonzero(np.abs(y - y0) >= threshold)
-    if change_indices.size == 0:
-        return max_n
-
-    first_change = int(change_indices[0])
-    guard = max(3, min(40, y.size // 25))
-    return max(1, min(max_n, first_change + guard))
-
-
-def _is_physical_input_coeffs(b1, b2, tol=1e-12):
-    """
-    Physical plausibility filter for ARX input coefficients.
-    For a FOPDT-like step response both coefficients should affect output
-    in the same direction (same sign as their sum).
-    """
-    denom = b1 + b2
-    if not np.isfinite(denom) or abs(denom) <= tol:
-        return False
-
-    if b1 * denom < -tol:
-        return False
-    if b2 * denom < -tol:
-        return False
-
-    return True
-
-
 def _run_rls(y, u, n, lam=1.0, delta=1e6):
     """
     RLS estimation for ARX model:
@@ -89,21 +47,6 @@ def _run_rls(y, u, n, lam=1.0, delta=1e6):
 
 
 def apro_FOPDT(system, downsample=4, max_delay_samples=300):
-    """
-    Approximation of system by FOPDT model
-    G(s) = K / (T*s + 1) * exp(-L*s)
-
-    Parameters
-    ----------
-    downsample : int
-        Decimation factor for response arrays before identification.
-        1 keeps original resolution.
-    max_delay_samples : int | None
-        Maximum tested delay index n. If None, uses len(y)//3.
-        The effective search range can be reduced automatically based on
-        the first significant output change to avoid overestimated delay.
-    """
-
     t, y = step_response(system)
 
     t = np.asarray(t, dtype=float)
@@ -134,7 +77,6 @@ def apro_FOPDT(system, downsample=4, max_delay_samples=300):
         max_delay_samples = len(y) // 3
 
     max_n = max(1, min(int(max_delay_samples), int(t[-1] / h)))
-    max_n = _infer_delay_search_limit(y, max_n)
 
     best = None
 
@@ -160,35 +102,23 @@ def apro_FOPDT(system, downsample=4, max_delay_samples=300):
         if not np.isfinite(K):
             continue
 
-        if not _is_physical_input_coeffs(b1, b2):
-            continue
-
         denom = b1 + b2
+
         frac = (b2 / denom) if not np.isclose(denom, 0.0) else 0.0
-        frac = float(np.clip(frac, 0.0, 1.0))
 
         L = (n + frac) * h
 
         if not np.isfinite(L) or L < 0:
             continue
 
-        candidate = (mse, L, K, T, a1, b1, b2)
+        candidate = (mse, K, T, L, a1, b1, b2)
 
-        if best is None:
-            best = candidate
-            continue
-
-        best_mse = best[0]
-        mse_tol = max(1e-12, 0.02 * best_mse)
-
-        if candidate[0] < best_mse - mse_tol:
-            best = candidate
-        elif abs(candidate[0] - best_mse) <= mse_tol and candidate[1] < best[1]:
+        if best is None or candidate[0] < best[0]:
             best = candidate
 
     if best is None:
         raise ValueError("FOPDT identification did not converge.")
 
-    _, L, K, T, _, _, _ = best
+    _, K, T, L, _, _, _ = best
 
     return float(K), float(T), float(L)
