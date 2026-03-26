@@ -184,7 +184,7 @@ def calculate():
 
     # Přidání zpoždění (Padé aproximace)
     if L_val > 0:
-        num_delay, den_delay = pade(L_val, 4) # aproximace 4. řádu
+        num_delay, den_delay = pade(L_val, 6) # aproximace 6. řádu
         delay = tf(num_delay, den_delay)
         system = base_system * delay
 
@@ -210,7 +210,7 @@ def calculate():
     # Pokud metoda NENÍ genetická, téměř vždy potřebujeme aproximaci FOPDT
     if Method != "GA":
         try:
-            K_ap, T_ap, L_ap = apro_FOPDT(system, fixed_k=K_val)
+            K_ap, T_ap, L_ap = apro_FOPDT(system, fixed_k=K_val, fixed_l=L_val)
             # Aktualizujeme proměnné, které půjdou do metod výpočtu PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
         except Exception as e:
@@ -250,7 +250,7 @@ def calculate():
     if T_fopdt > 0:
         apro_FOPDT_system = tf([K_fopdt], [T_fopdt, 1])
         if L_fopdt > 0:
-            apro_num_delay, apro_den_delay = pade(L_fopdt, 4)
+            apro_num_delay, apro_den_delay = pade(L_fopdt, 6)
             apro_FOPDT_system *= tf(apro_num_delay, apro_den_delay)
         try:
             if t_resp is not None and len(t_resp) > 1:

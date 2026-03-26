@@ -62,6 +62,9 @@ function Sim({ sim_points, y0 }) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: { top: 6, right: 10, bottom: 2, left: 4 },
+    },
     interaction: {
       mode: 'index',
       intersect: false,
@@ -88,29 +91,32 @@ function Sim({ sim_points, y0 }) {
     scales: {
       x: {
         type: 'linear',
+        grace: '2%',
         title: { display: true, text: 'Čas [s]', color: '#94a3b8' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#94a3b8' },
+        ticks: { color: '#94a3b8', maxTicksLimit: 8 },
       },
       y: {
         type: 'linear',
         position: 'left',
+        grace: '6%',
         title: { display: true, text: 'Hodnota (w, y)', color: '#38bdf8' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#94a3b8' },
+        ticks: { color: '#94a3b8', maxTicksLimit: 7 },
       },
       y1: {
         type: 'linear',
         position: 'right',
+        grace: '8%',
         title: { display: true, text: 'Řídicí vstup (u)', color: '#34d399' },
         grid: { drawOnChartArea: false },
-        ticks: { color: '#34d399' },
+        ticks: { color: '#34d399', maxTicksLimit: 7 },
       },
     },
   };
 
   return (
-    <div className="h-full min-h-[420px] w-full">
+    <div className="h-full w-full overflow-hidden">
       <Line data={data} options={options} />
     </div>
   );
