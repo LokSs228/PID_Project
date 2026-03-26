@@ -52,6 +52,7 @@ function App() {
         ? {
             overshoot: result.overshoot,
             settlingTime: result.settlingtime,
+            settlingStatus: result.settling_status,
             IAE: result.IAE,
             ITAE: result.ITAE,
           }
@@ -59,10 +60,10 @@ function App() {
     );
   };
 
-  const panelClass = 'rounded-2xl border border-slate-700/60 bg-slate-900/45 p-4 shadow-xl shadow-slate-950/30 backdrop-blur-sm sm:p-6';
-  const sectionLabel = 'mb-3 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400';
+  const panelClass = 'rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/80 sm:p-6';
+  const sectionLabel = 'mb-3 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600';
   const selectClass =
-    'block w-full rounded-xl border border-slate-700/80 bg-slate-900/80 p-3 text-sm text-slate-100 transition hover:border-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30';
+    'block w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 transition hover:border-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30';
 
   const chrOptions = [
     { value: 'CHR_0_POZ_H', label: '0% prekmit, pozadavana hodnota' },
@@ -76,15 +77,15 @@ function App() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-slate-950 px-3 py-5 text-slate-100 sm:px-6 sm:py-6 lg:px-8">
-      <div className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-36 top-36 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
+    <div className="relative min-h-screen overflow-x-hidden bg-slate-100 px-3 py-5 text-slate-900 sm:px-6 sm:py-6 lg:px-8">
+      <div className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div className="pointer-events-none absolute -right-36 top-36 h-96 w-96 rounded-full bg-amber-400/15 blur-3xl" />
 
       <div className="mx-auto max-w-[1600px] space-y-8">
-        <header className="rounded-2xl border border-slate-800/80 bg-slate-900/65 p-6 shadow-lg shadow-black/20">
+        <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/80">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-white">PIDtuner</h1>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900">PIDtuner</h1>
             </div>
           </div>
         </header>
@@ -121,11 +122,11 @@ function App() {
               </div>
 
               {method === 'GA' && (
-                <div className="space-y-4 rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
+                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-400">
+                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-600">
                       <span>Generace</span>
-                      <span className="font-mono text-sky-300">{generations}</span>
+                      <span className="font-mono text-sky-700">{generations}</span>
                     </div>
                     <input
                       type="range"
@@ -134,14 +135,14 @@ function App() {
                       step="10"
                       value={generations}
                       onChange={(e) => setGenerations(parseInt(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-700 accent-sky-500"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-sky-600"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-400">
+                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-600">
                       <span>Velikost populace</span>
-                      <span className="font-mono text-sky-300">{populationSize}</span>
+                      <span className="font-mono text-sky-700">{populationSize}</span>
                     </div>
                     <input
                       type="range"
@@ -150,14 +151,14 @@ function App() {
                       step="5"
                       value={populationSize}
                       onChange={(e) => setPopulationSize(parseInt(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-700 accent-sky-500"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-sky-600"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-400">
+                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-600">
                       <span>Mutace</span>
-                      <span className="font-mono text-sky-300">{mutationRate.toFixed(2)}</span>
+                      <span className="font-mono text-sky-700">{mutationRate.toFixed(2)}</span>
                     </div>
                     <input
                       type="range"
@@ -166,14 +167,14 @@ function App() {
                       step="0.01"
                       value={mutationRate}
                       onChange={(e) => setMutationRate(parseFloat(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-700 accent-sky-500"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-sky-600"
                     />
                   </div>
                 </div>
               )}
 
               {method === 'IMC' && (
-                <div className="rounded-xl border border-slate-700/60 bg-slate-900/60 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <label className={sectionLabel}>Lambda parametr (α)</label>
                   <input
                     type="number"
@@ -205,9 +206,9 @@ function App() {
         </div>
 
         {isLoading && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-700/60 bg-slate-900/45 py-14">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-700 border-t-sky-400" />
-            <p className="mt-4 text-sm uppercase tracking-[0.16em] text-slate-400">Načítání výsledků...</p>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-14">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-300 border-t-sky-500" />
+            <p className="mt-4 text-sm uppercase tracking-[0.16em] text-slate-600">Načítání výsledků...</p>
           </div>
         )}
 
@@ -238,7 +239,7 @@ function App() {
               <section className={`${panelClass} lg:col-span-3`}>
                 <h2 className={sectionLabel}>Kvalita regulace</h2>
                 {metrics && <MetricsTable metrics={metrics} />}
-                <div className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[11px] italic leading-relaxed text-slate-400">
+                <div className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[11px] italic leading-relaxed text-slate-600">
                   IAE a ITAE charakterizují celkovou regulační chybu. Čím nižší hodnota, tím kvalitnější nastavení.
                 </div>
               </section>
@@ -251,6 +252,7 @@ function App() {
 }
 
 export default App;
+
 
 
 

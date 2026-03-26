@@ -71,33 +71,33 @@ function Sim({ sim_points, y0 }) {
         display: true,
         position: 'top',
         labels: {
-          color: '#cbd5e1',
+          color: '#334155',
           usePointStyle: true,
           font: { size: 11, weight: '600' },
         },
       },
       title: { display: false },
       tooltip: {
-        backgroundColor: '#0f172a',
-        titleColor: '#f8fafc',
-        bodyColor: '#cbd5e1',
-        borderColor: '#334155',
+        backgroundColor: '#ffffff',
+        titleColor: '#0f172a',
+        bodyColor: '#334155',
+        borderColor: '#cbd5e1',
         borderWidth: 1,
       },
     },
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Čas [s]', color: '#94a3b8' },
+        title: { display: true, text: 'Čas [s]', color: '#475569' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#94a3b8' },
+        ticks: { color: '#64748b' },
       },
       y: {
         type: 'linear',
         position: 'left',
         title: { display: true, text: 'Hodnota (w, y)', color: '#38bdf8' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#94a3b8' },
+        ticks: { color: '#64748b' },
       },
       y1: {
         type: 'linear',
@@ -117,3 +117,4 @@ function Sim({ sim_points, y0 }) {
 }
 
 export default Sim;
+

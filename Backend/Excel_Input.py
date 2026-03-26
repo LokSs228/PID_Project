@@ -58,7 +58,7 @@ def fit_models(x, y):
                 }
 
         except Exception as e:
-            print(f"Ошибка для модели {model['name']}: {e}")
+            print(f"Chyba modelu {model['name']}: {e}")
 
     return best_result
 
@@ -67,7 +67,7 @@ def read_excel_to_arrays(file_path):
         df = pd.read_excel(file_path, header=None)
 
         if df.shape[1] < 2:
-            raise ValueError("В файле должно быть минимум два столбца")
+            raise ValueError("V souboru musi byt alespon dva sloupce.")
 
         x = df.iloc[:, 0].to_numpy()
         y = df.iloc[:, 1].to_numpy()
@@ -78,7 +78,7 @@ def read_excel_to_arrays(file_path):
         return x_norm, y_norm
 
     except Exception as e:
-        print(f"Ошибка при чтении Excel-файла: {e}")
+        print(f"Chyba pri cteni Excel souboru: {e}")
         return None, None
 
 def choose_file():

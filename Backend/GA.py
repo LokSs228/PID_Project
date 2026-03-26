@@ -21,12 +21,12 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
     w2 = float(w2)
 
     if t7 <= 0:
-        raise ValueError("t7 must be > 0")
+        raise ValueError("Parametr t7 musí být > 0.")
 
     dt = t7 / 1500.0
     t_values = np.arange(0.0, t2 - dt, dt, dtype=float)
     if t_values.size < 2:
-        raise ValueError("Not enough simulation samples for GA")
+        raise ValueError("Nedostatek simulačních vzorků pro genetický algoritmus.")
 
     w_values = np.where(t_values < t1, w1, w2).astype(float)
 

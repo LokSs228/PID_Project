@@ -77,8 +77,8 @@ def parse_complex(value, field_name):
         try:
             return complex(text)
         except ValueError:
-            raise ValueError(f'Invalid complex value for {field_name}: "{value}"')
-    raise ValueError(f'Invalid type for {field_name}')
+            raise ValueError(f'Neplatná komplexní hodnota pro {field_name}: "{value}"')
+    raise ValueError(f'Neplatný datový typ pro {field_name}')
 
 def parse_real(value, field_name, tol=1e-9):
     z = parse_complex(value, field_name)
@@ -86,7 +86,7 @@ def parse_real(value, field_name, tol=1e-9):
         return None
     if abs(z.imag) <= tol:
         return float(z.real)
-    raise ValueError(f'{field_name} must be real')
+    raise ValueError(f'{field_name} musí být reálné číslo')
 
 def parse_complex_list(values, field_name):
     if values is None:
@@ -101,7 +101,9 @@ def parse_complex_list(values, field_name):
 def to_real_array_if_close(arr, field_name, tol=1e-9):
     arr = np.asarray(arr, dtype=complex)
     if np.any(np.abs(arr.imag) > tol):
-        raise ValueError(f'{field_name} has non-real coefficients. Provide conjugate pairs so the final polynomial is real.')
+        raise ValueError(
+            f'{field_name} obsahuje nereálné koeficienty. Zadejte sdružené dvojice, aby výsledný polynom byl reálný.'
+        )
     return np.asarray(arr.real, dtype=float)
 
 def parse_nonneg_int(value, field_name):
@@ -110,9 +112,9 @@ def parse_nonneg_int(value, field_name):
     try:
         iv = int(value)
     except (TypeError, ValueError):
-        raise ValueError(f'{field_name} must be a non-negative integer')
+        raise ValueError(f'{field_name} musí být nezáporné celé číslo')
     if iv < 0:
-        raise ValueError(f'{field_name} must be a non-negative integer')
+        raise ValueError(f'{field_name} musí být nezáporné celé číslo')
     return iv
 
 
@@ -144,10 +146,10 @@ def calculate():
         alpha = 2.0
 
     if len(Params) < 11:
-        return jsonify({'error': 'Not enough timeParams'}), 400
+        return jsonify({'error': 'Nedostatek parametrů timeParams.'}), 400
 
     if K_in is None or not T_den:
-        return jsonify({'error': 'Missing parameters K or T'}), 400
+        return jsonify({'error': 'Chybí vstupní parametry K nebo T.'}), 400
 
     try:
         K_val = parse_real(K_in, "K")
@@ -169,8 +171,8 @@ def calculate():
         den = np.polymul(den, [ti, 1])
 
     try:
-        num = to_real_array_if_close(num, "Numerator")
-        den = to_real_array_if_close(den, "Denominator")
+        num = to_real_array_if_close(num, "Čitatel")
+        den = to_real_array_if_close(den, "Jmenovatel")
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
@@ -214,7 +216,13 @@ def calculate():
             # Aktualizujeme proměnné, které půjdou do metod výpočtu PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
         except Exception as e:
-            return jsonify({'error': f'Ошибка аппроксимации FOPDT: {str(e)}'}), 500
+            return jsonify({'error': f'Chyba při aproximaci FOPDT: {str(e)}'}), 500
+
+    if Method in ("ZN", "CHR_0", "CHR_0_POZ_H", "CHR_20", "CHR_20_POZ_H", "CHR_0_POT_P", "CHR_20_POT_P"):
+        if L_fopdt is None or float(L_fopdt) <= 0:
+            return jsonify({
+                'error': 'Metody Ziegler-Nichols a CHR nelze použít bez dopravního zpoždění (L > 0).'
+            }), 400
 
     # Výpočet koeficientů
     if Method == "ZN":
@@ -243,10 +251,10 @@ def calculate():
             )
             T_fopdt = 0 
         except Exception as e:
-             return jsonify({'error': f'Ошибка Genetic Algorithm: {str(e)}'}), 500
+             return jsonify({'error': f'Chyba genetického algoritmu: {str(e)}'}), 500
 
     else:
-        return jsonify({'error': f'Method "{Method}" not supported'}), 400
+        return jsonify({'error': f'Metoda "{Method}" není podporována.'}), 400
     if T_fopdt > 0:
         apro_FOPDT_system = tf([K_fopdt], [T_fopdt, 1])
         if L_fopdt > 0:
@@ -278,7 +286,7 @@ def calculate():
         step_data = sim_results["step_data"]
         
     except Exception as e:
-        return jsonify({'error': f'Ошибка симуляции: {str(e)}'}), 500
+        return jsonify({'error': f'Chyba simulace: {str(e)}'}), 500
 
     # --- 6. Sestavení odpovědi ---
     return jsonify({
@@ -291,6 +299,7 @@ def calculate():
         # Data ze slovníku metrics (vypočítaná uvnitř simulate)
         'overshoot': metrics["overshoot"],
         'settlingtime': metrics["settling_time"],
+        'settling_status': metrics.get("settling_status"),
         'IAE': metrics["IAE"],
         'ITAE': metrics["ITAE"],
         # Parametry modelu

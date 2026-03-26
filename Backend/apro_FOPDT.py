@@ -129,7 +129,7 @@ def _estimate_fixed_gain(y):
     y = np.asarray(y, dtype=float)
 
     if len(y) == 0:
-        raise ValueError("Empty response for gain estimation.")
+        raise ValueError("Prázdná odezva pro odhad zesílení.")
 
     tail_n = max(6, len(y) // 10)
     k_tail = float(np.median(y[-tail_n:]))
@@ -145,7 +145,7 @@ def _estimate_fixed_gain(y):
     if np.isfinite(k_peak) and abs(k_peak) > 1e-10:
         return k_peak
 
-    raise ValueError("Unable to estimate non-zero static gain K.")
+    raise ValueError("Nelze odhadnout nenulové statické zesílení K.")
 
 
 def _fraction_seeds(t, y, K_fixed):
@@ -401,7 +401,7 @@ def _ultra_refine_fopdt(t, y, K_fixed, T0, L0, h):
 def apro_FOPDT(system, downsample=1, max_delay_samples=300, fixed_k=None, fixed_l=None):
     downsample = int(downsample)
     if downsample < 1:
-        raise ValueError("downsample must be >= 1.")
+        raise ValueError("Parametr downsample musí být >= 1.")
 
     delay_key = None if max_delay_samples is None else int(max_delay_samples)
     fixed_k_key = None if fixed_k is None else round(float(fixed_k), 12)
@@ -421,13 +421,13 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300, fixed_k=None, fixed_
         y = y[::downsample]
 
     if len(t) < 6:
-        raise ValueError("Not enough response points for FOPDT identification.")
+        raise ValueError("Nedostatek bodů odezvy pro identifikaci FOPDT.")
 
     dt = np.diff(t)
     positive_dt = dt[dt > 0]
 
     if len(positive_dt) == 0:
-        raise ValueError("Unable to infer discretization step from response time axis.")
+        raise ValueError("Nelze určit krok diskretizace z časové osy odezvy.")
 
     h = float(np.median(positive_dt))
     if fixed_k is None:
@@ -435,16 +435,16 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300, fixed_k=None, fixed_
     else:
         K_fixed = float(fixed_k)
         if not np.isfinite(K_fixed) or abs(K_fixed) < 1e-12:
-            raise ValueError("fixed_k must be finite and non-zero.")
+            raise ValueError("fixed_k musí být konečné a nenulové číslo.")
 
     if fixed_l is not None:
         L_fixed = float(fixed_l)
         if not np.isfinite(L_fixed) or L_fixed < 0:
-            raise ValueError("fixed_l must be finite and >= 0.")
+            raise ValueError("fixed_l musí být konečné číslo a >= 0.")
 
         best_t = _refine_t_only(t, y, K_fixed, L_fixed, h)
         if best_t is None:
-            raise ValueError("FOPDT identification did not converge for fixed L.")
+            raise ValueError("Identifikace FOPDT pro fixní L nekonvergovala.")
 
         _, T = best_t
         result = (float(K_fixed), float(T), float(L_fixed))
@@ -487,7 +487,7 @@ def apro_FOPDT(system, downsample=1, max_delay_samples=300, fixed_k=None, fixed_
             best = candidate
 
     if best is None:
-        raise ValueError("FOPDT identification did not converge.")
+        raise ValueError("Identifikace FOPDT nekonvergovala.")
 
     mse_coarse, T, L = best
 

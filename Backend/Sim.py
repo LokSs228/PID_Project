@@ -68,9 +68,9 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     w2 = to_float_or_none(w2)
 
     if t1 is None or t2 is None or t7 is None or w1 is None or w2 is None:
-        raise ValueError("Invalid time parameters: t1, t2, t7, w1, w2 must be numeric.")
+        raise ValueError("Neplatné časové parametry: t1, t2, t7, w1, w2 musí být číselné.")
     if t7 <= 0:
-        raise ValueError("Invalid time parameters: t7 must be > 0.")
+        raise ValueError("Neplatné časové parametry: t7 musí být > 0.")
 
     dt = t7 / 1500.0
     t_values = np.arange(0.0, t7 + dt, dt, dtype=float)
@@ -143,15 +143,25 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
         y_prev = y
         y = _as_scalar(C_vec @ x + D_scalar * u)
 
-    metrics = {"overshoot": 0, "settling_time": 0, "IAE": 0, "ITAE": 0}
+    metrics = {"overshoot": 0, "settling_time": None, "IAE": 0, "ITAE": 0, "settling_status": None}
     if has_step_window:
-        if w_final != 0:
+        step_y_window = y_values[step_first_idx : step_last_idx + 1]
+        has_nonfinite = not np.all(np.isfinite(step_y_window))
+
+        if w_final != 0 and np.isfinite(y_max):
             metrics["overshoot"] = max(0.0, (y_max - w_final) / abs(w_final) * 100.0)
 
-        if last_outside_idx >= 0:
-            metrics["settling_time"] = (
-                t_values[last_outside_idx + 1] - t1 if last_outside_idx < step_last_idx else 0
-            )
+        if has_nonfinite:
+            metrics["settling_time"] = None
+            metrics["settling_status"] = "unstable_or_not_settled"
+        elif last_outside_idx >= 0:
+            if last_outside_idx < step_last_idx:
+                metrics["settling_time"] = t_values[last_outside_idx + 1] - t1
+            else:
+                metrics["settling_time"] = None
+                metrics["settling_status"] = "unstable_or_not_settled"
+        else:
+            metrics["settling_time"] = 0.0
 
         metrics["IAE"] = float(iae)
         metrics["ITAE"] = float(itae)
