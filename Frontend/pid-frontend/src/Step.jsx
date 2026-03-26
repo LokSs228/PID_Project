@@ -13,7 +13,8 @@ import {
 
 ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-function Step({ points, approxModel }) {
+function Step({ points, approxModel, theme }) {
+  const isDark = theme === 'dark';
   const pointArray = points?.points || [];
   const aproArray = points?.apro_points || [];
   const k = Number(approxModel?.K);
@@ -62,7 +63,7 @@ function Step({ points, approxModel }) {
       legend: {
         position: 'top',
         labels: {
-          color: '#334155',
+          color: isDark ? '#cbd5e1' : '#334155',
           usePointStyle: true,
           pointStyle: 'circle',
           padding: 18,
@@ -71,24 +72,24 @@ function Step({ points, approxModel }) {
       },
       title: { display: false },
       tooltip: {
-        backgroundColor: '#ffffff',
-        titleColor: '#0f172a',
-        bodyColor: '#334155',
-        borderColor: '#cbd5e1',
+        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        bodyColor: isDark ? '#cbd5e1' : '#334155',
+        borderColor: isDark ? '#334155' : '#cbd5e1',
         borderWidth: 1,
       },
     },
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Čas [s]', color: '#475569', font: { size: 11, weight: '600' } },
+        title: { display: true, text: 'Čas [s]', color: isDark ? '#94a3b8' : '#475569', font: { size: 11, weight: '600' } },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#64748b' },
+        ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
       y: {
-        title: { display: true, text: 'Amplituda y(t)', color: '#475569', font: { size: 11, weight: '600' } },
+        title: { display: true, text: 'Amplituda y(t)', color: isDark ? '#94a3b8' : '#475569', font: { size: 11, weight: '600' } },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#64748b' },
+        ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
     },
   };
@@ -97,11 +98,11 @@ function Step({ points, approxModel }) {
     <div className="h-full min-h-[340px] w-full overflow-hidden">
       {showApproxParams && (
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">Aproximovaný FOPDT model</div>
+          <div className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Aproximovaný FOPDT model</div>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-md border border-amber-300 bg-white p-2 text-center text-slate-800">K = <span className="font-mono text-amber-700">{formatParam(k)}</span></div>
-            <div className="rounded-md border border-amber-300 bg-white p-2 text-center text-slate-800">T = <span className="font-mono text-amber-700">{formatParam(t)}</span></div>
-            <div className="rounded-md border border-amber-300 bg-white p-2 text-center text-slate-800">L = <span className="font-mono text-amber-700">{formatParam(l)}</span></div>
+            <div className={`rounded-md border p-2 text-center ${isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'}`}>K = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(k)}</span></div>
+            <div className={`rounded-md border p-2 text-center ${isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'}`}>T = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(t)}</span></div>
+            <div className={`rounded-md border p-2 text-center ${isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'}`}>L = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(l)}</span></div>
           </div>
         </div>
       )}

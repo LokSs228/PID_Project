@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import TransferFunctionInput from './TransferFunctionInput';
 import PidTable from './PIDtable';
 import Step from './Step';
@@ -19,6 +19,8 @@ function App() {
   const [lambdaAlpha, setLambdaAlpha] = useState(2.0);
   const [metrics, setMetrics] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('pid_theme') || 'dark');
+  const isDark = theme === 'dark';
 
   const handleRequestStart = () => {
     setIsLoading(true);
@@ -60,10 +62,25 @@ function App() {
     );
   };
 
-  const panelClass = 'rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/80 sm:p-6';
-  const sectionLabel = 'mb-3 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600';
+  useEffect(() => {
+    localStorage.setItem('pid_theme', theme);
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+  }, [theme, isDark]);
+
+  const panelClass = `rounded-2xl p-4 sm:p-6 ${
+    isDark
+      ? 'border border-slate-700/60 bg-slate-900/45 shadow-xl shadow-slate-950/30 backdrop-blur-sm'
+      : 'border border-slate-200 bg-white shadow-lg shadow-slate-200/80'
+  }`;
+  const sectionLabel = `mb-3 block text-[10px] font-bold uppercase tracking-[0.16em] ${
+    isDark ? 'text-slate-400' : 'text-slate-600'
+  }`;
   const selectClass =
-    'block w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 transition hover:border-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30';
+    `block w-full rounded-xl p-3 text-sm transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 ${
+      isDark
+        ? 'border border-slate-700/80 bg-slate-900/80 text-slate-100 hover:border-slate-500'
+        : 'border border-slate-300 bg-white text-slate-900 hover:border-slate-400'
+    }`;
 
   const chrOptions = [
     { value: 'CHR_0_POZ_H', label: '0% prekmit, pozadavana hodnota' },
@@ -77,16 +94,45 @@ function App() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-slate-100 px-3 py-5 text-slate-900 sm:px-6 sm:py-6 lg:px-8">
-      <div className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-36 top-36 h-96 w-96 rounded-full bg-amber-400/15 blur-3xl" />
+    <div
+      className={`relative min-h-screen overflow-x-hidden px-3 py-5 sm:px-6 sm:py-6 lg:px-8 ${
+        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full blur-3xl ${
+          isDark ? 'bg-cyan-500/15' : 'bg-cyan-400/15'
+        }`}
+      />
+      <div
+        className={`pointer-events-none absolute -right-36 top-36 h-96 w-96 rounded-full blur-3xl ${
+          isDark ? 'bg-amber-500/10' : 'bg-amber-400/15'
+        }`}
+      />
 
       <div className="mx-auto max-w-[1600px] space-y-8">
-        <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/80">
+        <header
+          className={`rounded-2xl p-6 ${
+            isDark
+              ? 'border border-slate-800/80 bg-slate-900/65 shadow-lg shadow-black/20'
+              : 'border border-slate-200 bg-white shadow-lg shadow-slate-200/80'
+          }`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900">PIDtuner</h1>
+              <h1 className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>PIDtuner</h1>
             </div>
+            <button
+              type="button"
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              className={`rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition ${
+                isDark
+                  ? 'border-slate-600 bg-slate-800 text-slate-200 hover:border-sky-400 hover:text-sky-300'
+                  : 'border-slate-300 bg-white text-slate-700 hover:border-sky-500 hover:text-sky-700'
+              }`}
+            >
+              {isDark ? 'Světlý režim' : 'Tmavý režim'}
+            </button>
           </div>
         </header>
 
@@ -122,11 +168,15 @@ function App() {
               </div>
 
               {method === 'GA' && (
-                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div
+                  className={`space-y-4 rounded-xl p-4 ${
+                    isDark ? 'border border-slate-700/60 bg-slate-900/60' : 'border border-slate-200 bg-slate-50'
+                  }`}
+                >
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-600">
+                    <div className={`flex items-center justify-between text-[11px] uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       <span>Generace</span>
-                      <span className="font-mono text-sky-700">{generations}</span>
+                      <span className={`font-mono ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{generations}</span>
                     </div>
                     <input
                       type="range"
@@ -135,14 +185,14 @@ function App() {
                       step="10"
                       value={generations}
                       onChange={(e) => setGenerations(parseInt(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-sky-600"
+                      className={`h-1.5 w-full cursor-pointer appearance-none rounded-lg ${isDark ? 'bg-slate-700 accent-sky-500' : 'bg-slate-300 accent-sky-600'}`}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-600">
+                    <div className={`flex items-center justify-between text-[11px] uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       <span>Velikost populace</span>
-                      <span className="font-mono text-sky-700">{populationSize}</span>
+                      <span className={`font-mono ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{populationSize}</span>
                     </div>
                     <input
                       type="range"
@@ -151,14 +201,14 @@ function App() {
                       step="5"
                       value={populationSize}
                       onChange={(e) => setPopulationSize(parseInt(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-sky-600"
+                      className={`h-1.5 w-full cursor-pointer appearance-none rounded-lg ${isDark ? 'bg-slate-700 accent-sky-500' : 'bg-slate-300 accent-sky-600'}`}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-slate-600">
+                    <div className={`flex items-center justify-between text-[11px] uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                       <span>Mutace</span>
-                      <span className="font-mono text-sky-700">{mutationRate.toFixed(2)}</span>
+                      <span className={`font-mono ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>{mutationRate.toFixed(2)}</span>
                     </div>
                     <input
                       type="range"
@@ -167,14 +217,14 @@ function App() {
                       step="0.01"
                       value={mutationRate}
                       onChange={(e) => setMutationRate(parseFloat(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-sky-600"
+                      className={`h-1.5 w-full cursor-pointer appearance-none rounded-lg ${isDark ? 'bg-slate-700 accent-sky-500' : 'bg-slate-300 accent-sky-600'}`}
                     />
                   </div>
                 </div>
               )}
 
               {method === 'IMC' && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className={`rounded-xl p-4 ${isDark ? 'border border-slate-700/60 bg-slate-900/60' : 'border border-slate-200 bg-slate-50'}`}>
                   <label className={sectionLabel}>Lambda parametr (α)</label>
                   <input
                     type="number"
@@ -183,7 +233,7 @@ function App() {
                     onChange={(e) => setLambdaAlpha(parseFloat(e.target.value))}
                     className={selectClass}
                   />
-                  <p className="mt-2 text-xs text-slate-500">Lambda = α × L nebo α × Tdom</p>
+                  <p className={`mt-2 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Lambda = α × L nebo α × Tdom</p>
                 </div>
               )}
             </div>
@@ -201,14 +251,15 @@ function App() {
               mutationRate={mutationRate}
               controllerType={controllerType}
               lambdaAlpha={lambdaAlpha}
+              theme={theme}
             />
           </section>
         </div>
 
         {isLoading && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-14">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-300 border-t-sky-500" />
-            <p className="mt-4 text-sm uppercase tracking-[0.16em] text-slate-600">Načítání výsledků...</p>
+          <div className={`flex flex-col items-center justify-center rounded-2xl py-14 ${isDark ? 'border border-slate-700/60 bg-slate-900/45' : 'border border-slate-200 bg-white'}`}>
+            <div className={`h-12 w-12 animate-spin rounded-full border-4 ${isDark ? 'border-slate-700 border-t-sky-400' : 'border-slate-300 border-t-sky-500'}`} />
+            <p className={`mt-4 text-sm uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Načítání výsledků...</p>
           </div>
         )}
 
@@ -217,13 +268,13 @@ function App() {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
               <section className={`${panelClass} lg:col-span-4`}>
                 <h2 className={sectionLabel}>Vypočtené koeficienty</h2>
-                <PidTable data={pidData} />
+                <PidTable data={pidData} theme={theme} />
               </section>
 
               <section className={`${panelClass} lg:col-span-8`}>
                 <h2 className={sectionLabel}>Přechodová charakteristika systému</h2>
                 <div className="h-[360px] sm:h-[420px]">
-                  <Step points={stepPoints} approxModel={approxModel} />
+                  <Step points={stepPoints} approxModel={approxModel} theme={theme} />
                 </div>
               </section>
             </div>
@@ -232,14 +283,18 @@ function App() {
               <section className={`${panelClass} lg:col-span-9`}>
                 <h2 className={`${sectionLabel} text-center`}>Simulace regulačního pochodu s PID regulátorem</h2>
                 <div className="h-[360px] sm:h-[520px]">
-                  <Sim sim_points={sim_points} y0={y0} />
+                  <Sim sim_points={sim_points} y0={y0} theme={theme} />
                 </div>
               </section>
 
               <section className={`${panelClass} lg:col-span-3`}>
                 <h2 className={sectionLabel}>Kvalita regulace</h2>
-                {metrics && <MetricsTable metrics={metrics} />}
-                <div className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[11px] italic leading-relaxed text-slate-600">
+                {metrics && <MetricsTable metrics={metrics} theme={theme} />}
+                <div
+                  className={`mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[11px] italic leading-relaxed ${
+                    isDark ? 'text-slate-400' : 'text-slate-600'
+                  }`}
+                >
                   IAE a ITAE charakterizují celkovou regulační chybu. Čím nižší hodnota, tím kvalitnější nastavení.
                 </div>
               </section>

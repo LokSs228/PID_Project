@@ -1,7 +1,8 @@
 import React from 'react';
 
-function MetricsTable({ metrics }) {
+function MetricsTable({ metrics, theme }) {
   if (!metrics) return null;
+  const isDark = theme === 'dark';
 
   const { overshoot, settlingTime, settlingStatus, IAE, ITAE } = metrics;
 
@@ -23,23 +24,23 @@ function MetricsTable({ metrics }) {
   };
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 bg-slate-100 px-4 py-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">Vysledne metriky</h3>
+    <div className={`overflow-x-auto rounded-2xl ${isDark ? 'border border-slate-700/60 bg-slate-900/50' : 'border border-slate-200 bg-white'}`}>
+      <div className={`border-b px-4 py-3 ${isDark ? 'border-slate-700/60 bg-slate-800/70' : 'border-slate-200 bg-slate-100'}`}>
+        <h3 className={`text-xs font-semibold uppercase tracking-[0.12em] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Vysledne metriky</h3>
       </div>
 
       <table className="min-w-full border-collapse text-sm">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-slate-600">
+          <tr className={`text-left text-[11px] uppercase tracking-[0.1em] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             <th className="px-4 py-2.5 font-semibold">Metrika</th>
             <th className="px-4 py-2.5 font-semibold">Hodnota</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200">
+        <tbody className={isDark ? 'divide-y divide-slate-800/80' : 'divide-y divide-slate-200'}>
           {rows.map((row) => (
-            <tr key={row.label} className="transition hover:bg-slate-50">
-              <td className="px-4 py-3 text-slate-800">{row.label}</td>
-              <td className="px-4 py-3 font-mono tabular-nums text-slate-900">{formatRowValue(row)}</td>
+            <tr key={row.label} className={`transition ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
+              <td className={`px-4 py-3 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{row.label}</td>
+              <td className={`px-4 py-3 font-mono tabular-nums ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{formatRowValue(row)}</td>
             </tr>
           ))}
         </tbody>

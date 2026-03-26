@@ -13,7 +13,8 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(LinearScale, CategoryScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function Sim({ sim_points, y0 }) {
+function Sim({ sim_points, y0, theme }) {
+  const isDark = theme === 'dark';
   if (!sim_points || sim_points.length === 0) return null;
 
   const wData = sim_points.map((point) => ({ x: Number(point.t), y: Number(point.w) }));
@@ -71,33 +72,33 @@ function Sim({ sim_points, y0 }) {
         display: true,
         position: 'top',
         labels: {
-          color: '#334155',
+          color: isDark ? '#cbd5e1' : '#334155',
           usePointStyle: true,
           font: { size: 11, weight: '600' },
         },
       },
       title: { display: false },
       tooltip: {
-        backgroundColor: '#ffffff',
-        titleColor: '#0f172a',
-        bodyColor: '#334155',
-        borderColor: '#cbd5e1',
+        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        bodyColor: isDark ? '#cbd5e1' : '#334155',
+        borderColor: isDark ? '#334155' : '#cbd5e1',
         borderWidth: 1,
       },
     },
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Čas [s]', color: '#475569' },
+        title: { display: true, text: 'Čas [s]', color: isDark ? '#94a3b8' : '#475569' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#64748b' },
+        ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
       y: {
         type: 'linear',
         position: 'left',
         title: { display: true, text: 'Hodnota (w, y)', color: '#38bdf8' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
-        ticks: { color: '#64748b' },
+        ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
       y1: {
         type: 'linear',
