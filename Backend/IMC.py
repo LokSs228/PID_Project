@@ -1,8 +1,8 @@
 def IMC (K, T, L, alpha):
-    if K <= 0 or T <= 0 or L <= 0:
+    if K <= 0 or T <= 0:
         return None
     ratio = L / T
-    if 0.5 <= ratio <= 2:
+    if 0 <= ratio <= 2:
         base_lambda = T
     elif ratio > 2:
         base_lambda = L
