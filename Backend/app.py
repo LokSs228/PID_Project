@@ -302,7 +302,7 @@ def calculate():
         return jsonify({'error': f'Chyba simulace: {str(e)}'}), 500
 
     # --- 6. Sestavení odpovědi ---
-    return jsonify({
+    response_payload = {
         'step_response': points,
         'apro_step_response': apro_points,
         'pid': pid_coeffs,
@@ -315,15 +315,18 @@ def calculate():
         'settling_status': metrics.get("settling_status"),
         'IAE': metrics["IAE"],
         'ITAE': metrics["ITAE"],
-        # Parametry modelu
-        'K': K_fopdt, 
-        'T': T_fopdt,
-        'L': L_fopdt,
         # Data pro detailní graf přechodového děje
         'step w': step_data["w"],
         'step t': step_data["t"],
         'step y': step_data["y"]
-    })
+    }
+
+    if used_fopdt_approximation:
+        response_payload['K'] = K_fopdt
+        response_payload['T'] = T_fopdt
+        response_payload['L'] = L_fopdt
+
+    return jsonify(response_payload)
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "5000"))
