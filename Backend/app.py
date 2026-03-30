@@ -203,18 +203,31 @@ def calculate():
     Kp_P = Kp_PI = Kp_PID = Ki_PI = Ki_PID = Kd_PID = Kp_PD = Kd_PD = 0
     
     # Proměnné pro aproximovaný model (FOPDT)
-    K_fopdt, T_fopdt, L_fopdt = K_val, 0, L_val 
+    # Pokud je vstupní přenos už FOPDT:
+    # G(s) = K / (T*s + 1) * e^(-L*s)
+    is_fopdt_system = (
+        len(T_den_vals) == 1
+        and len(T_num_vals) == 0
+        and diff_order == 0
+        and int_order == 0
+    )
+    T_input_fopdt = float(np.real(T_den_vals[0])) if is_fopdt_system else 0.0
+
+    K_fopdt, T_fopdt, L_fopdt = K_val, T_input_fopdt, L_val 
     apro_FOPDT_system = None
     apro_points = []
+    used_fopdt_approximation = False
 
     # --- 4. Volba metody ladění ---
     
-    # Pokud metoda NENÍ genetická, téměř vždy potřebujeme aproximaci FOPDT
-    if Method != "GA":
+    # Volba aproximace FOPDT podle typu systému.
+    # FOPDT vstup neaproximujeme, ostatní systémy ano (mimo GA).
+    if Method != "GA" and not is_fopdt_system:
         try:
             K_ap, T_ap, L_ap = apro_FOPDT(system, fixed_k=K_val)
             # Aktualizujeme proměnné, které půjdou do metod výpočtu PID
             K_fopdt, T_fopdt, L_fopdt = K_ap, T_ap, L_ap
+            used_fopdt_approximation = True
         except Exception as e:
             return jsonify({'error': f'Chyba při aproximaci FOPDT: {str(e)}'}), 500
 
@@ -255,7 +268,7 @@ def calculate():
 
     else:
         return jsonify({'error': f'Metoda "{Method}" není podporována.'}), 400
-    if T_fopdt > 0:
+    if used_fopdt_approximation and T_fopdt > 0:
         apro_FOPDT_system = tf([K_fopdt], [T_fopdt, 1])
         if L_fopdt > 0:
             apro_num_delay, apro_den_delay = pade(L_fopdt, 6)
