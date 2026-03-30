@@ -32,6 +32,17 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
 
     num = np.atleast_1d(system.num[0][0])
     den = np.atleast_1d(system.den[0][0])
+
+    # Estimate process gain sign from the transfer function.
+    # Prefer DC gain when available, fallback to leading-coefficient ratio.
+    dc_den = float(np.polyval(den, 0.0))
+    if abs(dc_den) > 1e-12:
+        system_gain = float(np.polyval(num, 0.0) / dc_den)
+    else:
+        system_gain = float(num[0] / den[0])
+
+    init_low, init_high = (0.0, -10.0) if system_gain < 0.0 else (0.0, 10.0)
+    coeff_min, coeff_max = (-100.0, 0.0) if system_gain < 0.0 else (0.0, 100.0)
     A_d, B_vec, C_vec, D_scalar = get_discrete_state_space(num, den, dt)
 
     y0_scalar = _as_scalar(y0)
@@ -74,9 +85,9 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
     for _ in range(population_size):
         population.append(
             {
-                "Kp": random.uniform(0.0, 10.0),
-                "Ki": random.uniform(0.0, 10.0),
-                "Kd": random.uniform(0.0, 10.0),
+                "Kp": random.uniform(init_low, init_high),
+                "Ki": random.uniform(init_low, init_high),
+                "Kd": random.uniform(init_low, init_high),
             }
         )
 
@@ -106,13 +117,13 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             }
 
             if random.random() < mutation_rate:
-                child["Kp"] += random.gauss(0.0, 0.5)
-                child["Ki"] += random.gauss(0.0, 0.5)
-                child["Kd"] += random.gauss(0.0, 0.5)
+                child["Kp"] += random.gauss(0.0, 0.2 * abs(child["Kp"]))
+                child["Ki"] += random.gauss(0.0, 0.2 * abs(child["Ki"]))
+                child["Kd"] += random.gauss(0.0, 0.2 * abs(child["Kd"]))
 
-            child["Kp"] = max(0.0, min(child["Kp"], 100.0))
-            child["Ki"] = max(0.0, min(child["Ki"], 100.0))
-            child["Kd"] = max(0.0, min(child["Kd"], 100.0))
+            child["Kp"] = max(coeff_min, min(child["Kp"], coeff_max))
+            child["Ki"] = max(coeff_min, min(child["Ki"], coeff_max))
+            child["Kd"] = max(coeff_min, min(child["Kd"], coeff_max))
             next_population.append(child)
 
         population = next_population
