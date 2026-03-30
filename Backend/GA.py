@@ -43,6 +43,7 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
 
     init_low, init_high = (0.0, -10.0) if system_gain < 0.0 else (0.0, 10.0)
     coeff_min, coeff_max = (-100.0, 0.0) if system_gain < 0.0 else (0.0, 100.0)
+    mutation_mean_sign = 1.0 if system_gain < 0.0 else -1.0
     A_d, B_vec, C_vec, D_scalar = get_discrete_state_space(num, den, dt)
 
     y0_scalar = _as_scalar(y0)
@@ -117,9 +118,12 @@ def genetic_algorithm(system, params, y0, generations, population_size, mutation
             }
 
             if random.random() < mutation_rate:
-                child["Kp"] += random.gauss(0.0, 0.2 * abs(child["Kp"]))
-                child["Ki"] += random.gauss(0.0, 0.2 * abs(child["Ki"]))
-                child["Kd"] += random.gauss(0.0, 0.2 * abs(child["Kd"]))
+                kp_scale = max(abs(child["Kp"]), 1e-9)
+                ki_scale = max(abs(child["Ki"]), 1e-9)
+                kd_scale = max(abs(child["Kd"]), 1e-9)
+                child["Kp"] += random.gauss(mutation_mean_sign * 0.1 * kp_scale, 0.3 * kp_scale)
+                child["Ki"] += random.gauss(mutation_mean_sign * 0.1 * ki_scale, 0.3 * ki_scale)
+                child["Kd"] += random.gauss(mutation_mean_sign * 0.1 * kd_scale, 0.3 * kd_scale)
 
             child["Kp"] = max(coeff_min, min(child["Kp"], coeff_max))
             child["Ki"] = max(coeff_min, min(child["Ki"], coeff_max))
