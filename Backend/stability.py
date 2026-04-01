@@ -9,7 +9,10 @@ kde L = G_r·G_s).
 import numpy as np
 from control import feedback, poles, tf
 
-_STRICT_NEG_TOL = 1e-7
+# Otevřená levá polovina: Re(p) < 0. Nepoužívat spodní mez typu Re < -1e-7 — to falešně
+# označí stabilní systémy s póly v (-1e-7, 0), např. Re = -5e-8.
+# Numericky: „všechny póly vlevo od malé kladné meze“ <=> max(Re) < _RHP_EPS.
+_RHP_EPS = 1e-5
 
 
 def _nearly_zero(x, tol=1e-12):
@@ -47,7 +50,7 @@ def closed_loop_poles(plant, Kp, Ki, Kd):
 def analyze_closed_loop_stability(plant, Kp, Ki, Kd):
     """
     Vrací slovník vhodný pro JSON:
-      stable — všechny Re(p) < -_STRICT_NEG_TOL
+      stable — max(Re(p)) < _RHP_EPS (ekvivalent otevřené LHP s tolerancí na FP šum)
       poles — seřazené podle -Re(p), Im(p)
       pole_real_parts — reálné části ve stejném pořadí
     """
@@ -58,7 +61,7 @@ def analyze_closed_loop_stability(plant, Kp, Ki, Kd):
     ]
     pole_list.sort(key=lambda d: (-d["re"], d["im"]))
     reals = [p["re"] for p in pole_list]
-    stable = all(r < -_STRICT_NEG_TOL for r in reals)
+    stable = bool(max(reals) < _RHP_EPS) if reals else True
     return {
         "stable": stable,
         "poles": pole_list,
