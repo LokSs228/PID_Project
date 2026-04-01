@@ -3,7 +3,7 @@ import os
 from flask import Flask, request, jsonify
 from control import tf, step_response, pade
 from zn_method import zn_method
-from Sim import simulate
+from Sim import simulate, simulation_indicates_instability
 from GA import genetic_algorithm
 from apro_FOPDT import apro_FOPDT 
 from CHR_0_POZ_H import CHR_0 as CHR_0_POZ_H
@@ -298,7 +298,11 @@ def calculate():
     except Exception as e:
         return jsonify({'error': f'Chyba analýzy stability: {str(e)}'}), 500
 
-    closed_loop_stable = stability["stable"]
+    continuous_poles_stable = stability["stable"]
+    stability["continuous_poles_stable"] = continuous_poles_stable
+    stability["simulation_indicates_unstable"] = False
+
+    closed_loop_stable = continuous_poles_stable
     sim_points = []
     metrics = {
         "overshoot": 0,
@@ -315,6 +319,9 @@ def calculate():
             sim_points = sim_results["sim_points"]
             metrics = sim_results["metrics"]
             step_data = sim_results["step_data"]
+            if simulation_indicates_instability(sim_results):
+                stability["stable"] = False
+                stability["simulation_indicates_unstable"] = True
         except Exception as e:
             return jsonify({'error': f'Chyba simulace: {str(e)}'}), 500
 

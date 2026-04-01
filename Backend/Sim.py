@@ -175,3 +175,20 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
         "metrics": metrics,
         "step_data": {"t": step_t.tolist(), "y": step_y.tolist(), "w": step_w.tolist()},
     }
+
+
+def simulation_indicates_instability(sim_results):
+    """
+    Diskretní simulace v simulate() používá jinak numericky PID než spojitý G_r(s)
+    u analýzy pólů; pokud odezva diverguje / neudrží toleranci, výsledek má přednost
+    před čistě spojitou LHP kontrolou.
+    """
+    metrics = sim_results.get("metrics") or {}
+    if metrics.get("settling_status") == "unstable_or_not_settled":
+        return True
+    for pt in sim_results.get("sim_points") or []:
+        for key in ("y", "u", "w"):
+            val = pt.get(key)
+            if val is None or not np.isfinite(float(val)):
+                return True
+    return False
