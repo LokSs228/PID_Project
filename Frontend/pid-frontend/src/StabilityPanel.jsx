@@ -1,4 +1,5 @@
 import React from 'react';
+import ComplexPolePlot from './ComplexPolePlot';
 
 function StabilityPanel({ stability, theme }) {
   if (!stability || typeof stability.stable !== 'boolean') return null;
@@ -16,7 +17,7 @@ function StabilityPanel({ stability, theme }) {
   const disc = discrete || {};
   const polesZ = disc.poles_z || [];
   const dt = disc.dt;
-  const maxMod = disc.max_modulus;
+  const polesS = continuous?.poles || [];
 
   const cardClass = `rounded-2xl border overflow-hidden ${
     isDark ? 'border-slate-700/60 bg-slate-900/50' : 'border-slate-200 bg-white'
@@ -35,7 +36,7 @@ function StabilityPanel({ stability, theme }) {
   }`;
   const tdClass = `px-3 py-2 font-mono text-xs tabular-nums ${isDark ? 'text-slate-100' : 'text-slate-900'}`;
 
-  const skipSim = discOk === false;
+  const sectionTitle = `mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${isDark ? 'text-slate-500' : 'text-slate-600'}`;
   const showMismatchFooter =
     typeof contOk === 'boolean' && typeof discOk === 'boolean' && contOk !== discOk;
 
@@ -48,18 +49,11 @@ function StabilityPanel({ stability, theme }) {
       >
         <div>
           <h3 className={`text-xs font-semibold uppercase tracking-[0.12em] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-            Stabilita uzavřené smyčky (z-rovina)
+            Stabilita uzavřené smyčky
           </h3>
           {dt != null && (
             <p className={`mt-1 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-              Diskretizace jako ve simulaci: <span className="font-mono">T = {Number(dt).toFixed(6)}</span> s · kriterium{' '}
-              <span className={`font-mono ${isDark ? 'text-sky-300/90' : 'text-sky-700'}`}>|z| &lt; 1</span>
-              {maxMod != null && (
-                <>
-                  {' '}
-                  · max <span className="font-mono">|z|</span> = {Number(maxMod).toFixed(6)}
-                </>
-              )}
+              Krok diskrétizace ve stejné simulaci: <span className="font-mono">T = {Number(dt).toFixed(6)}</span> s
             </p>
           )}
         </div>
@@ -68,50 +62,72 @@ function StabilityPanel({ stability, theme }) {
         </span>
       </div>
 
-      <div className="p-4">
+      <div className="space-y-8 p-4">
         {!stable && simBad && (
           <p
-            className={`mb-4 rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${
+            className={`rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${
               isDark ? 'border-amber-500/30 bg-amber-950/35 text-amber-100/90' : 'border-amber-300 bg-amber-50 text-amber-950'
             }`}
           >
-            Lineární diskretní model (|z| &lt; 1) předpovídá stabilitu, ale časová simulace v aplikaci ukazuje neustálený nebo
-            divergentní výstup (včetně vlivu omezení akční veličiny a tvaru trajektorie).
-          </p>
-        )}
-        {!stable && skipSim && (
-          <p
-            className={`mb-4 rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${
-              isDark ? 'border-rose-500/25 bg-rose-950/40 text-rose-200/90' : 'border-rose-200 bg-rose-50 text-rose-900'
-            }`}
-          >
-            Simulace regulačního pochodu a tabulka metrik kvality nejsou zobrazeny.
+            Diskretní lineární model předpovídá stabilitu, ale časová simulace ukazuje neustálený nebo divergentní výstup
+            (omezení akční veličiny, tvar w(t)).
           </p>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-500/10">
-          <table className="min-w-full border-collapse text-sm">
-            <thead>
-              <tr className={isDark ? 'bg-slate-800/40' : 'bg-slate-100'}>
-                <th className={thClass}>Re(z)</th>
-                <th className={thClass}>Im(z)</th>
-              </tr>
-            </thead>
-            <tbody className={isDark ? 'divide-y divide-slate-800/80' : 'divide-y divide-slate-200'}>
-              {polesZ.map((p, i) => (
-                <tr key={`${p.re}-${p.im}-${i}`} className={isDark ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'}>
-                  <td className={tdClass}>{Number(p.re).toFixed(6)}</td>
-                  <td className={tdClass}>{Number(p.im).toFixed(6)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          <div className={sectionTitle}>Diskretní uzavřená smyčka — póly v rovině z</div>
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+            <div className="overflow-x-auto rounded-xl border border-slate-500/10">
+              <table className="min-w-full border-collapse text-sm">
+                <thead>
+                  <tr className={isDark ? 'bg-slate-800/40' : 'bg-slate-100'}>
+                    <th className={thClass}>Re(z)</th>
+                    <th className={thClass}>Im(z)</th>
+                  </tr>
+                </thead>
+                <tbody className={isDark ? 'divide-y divide-slate-800/80' : 'divide-y divide-slate-200'}>
+                  {polesZ.map((p, i) => (
+                    <tr key={`${p.re}-${p.im}-${i}`} className={isDark ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'}>
+                      <td className={tdClass}>{Number(p.re).toFixed(6)}</td>
+                      <td className={tdClass}>{Number(p.im).toFixed(6)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ComplexPolePlot variant="z" poles={polesZ} theme={theme} />
+          </div>
         </div>
 
-        {showMismatchFooter && continuous?.poles?.length > 0 && (
-          <p className={`mt-3 text-[10px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-            Oproti ideálnímu spojitému modelu (s-rovina) se závěr odlišuje — pro reálnou implementaci PLC a programový PID je
-            rozhodující diskrétní kritérium uvnitř jednotkové kružnice.
+        <div>
+          <div className={sectionTitle}>Spojitý ideální PID — uzavřená smyčka v rovině s</div>
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+            <div className="overflow-x-auto rounded-xl border border-slate-500/10">
+              <table className="min-w-full border-collapse text-sm">
+                <thead>
+                  <tr className={isDark ? 'bg-slate-800/40' : 'bg-slate-100'}>
+                    <th className={thClass}>Re(s)</th>
+                    <th className={thClass}>Im(s)</th>
+                  </tr>
+                </thead>
+                <tbody className={isDark ? 'divide-y divide-slate-800/80' : 'divide-y divide-slate-200'}>
+                  {polesS.map((p, i) => (
+                    <tr key={`${p.re}-${p.im}-${i}`} className={isDark ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'}>
+                      <td className={tdClass}>{Number(p.re).toFixed(6)}</td>
+                      <td className={tdClass}>{Number(p.im).toFixed(6)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ComplexPolePlot variant="s" poles={polesS} theme={theme} />
+          </div>
+        </div>
+
+        {showMismatchFooter && polesS.length > 0 && (
+          <p className={`text-[10px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+            Závěr o stabilitě aplikace vychází z diskretního modelu (z); spojitá s-rovina slouží k porovnání s klasickou
+            syntézou v čase.
           </p>
         )}
       </div>

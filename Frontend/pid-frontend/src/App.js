@@ -50,12 +50,13 @@ function App() {
         ? { K: result.K, T: result.T, L: result.L }
         : null
     );
-    setSimParams(result.closed_loop_stable ? result.sim_points : []);
+    const st = result.stability || null;
+    const showSimAndMetrics = st ? st.stable === true : !!result.closed_loop_stable;
+    setSimParams(showSimAndMetrics ? result.sim_points || [] : []);
     setY0(result.y0);
-    setStability(result.stability || null);
-    const showMetrics = result.closed_loop_stable && result.overshoot !== undefined;
+    setStability(st);
     setMetrics(
-      showMetrics
+      showSimAndMetrics && result.overshoot !== undefined
         ? {
             overshoot: result.overshoot,
             settlingTime: result.settlingtime,
@@ -286,26 +287,28 @@ function App() {
 
             {stability && <StabilityPanel stability={stability} theme={theme} />}
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-              <section className={`${panelClass} lg:col-span-9`}>
-                <h2 className={`${sectionLabel} text-center`}>Simulace regulačního pochodu s PID regulátorem</h2>
-                <div className="h-[360px] sm:h-[520px]">
-                  <Sim sim_points={sim_points} y0={y0} theme={theme} />
-                </div>
-              </section>
+            {stability?.stable && (
+              <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+                <section className={`${panelClass} lg:col-span-9`}>
+                  <h2 className={`${sectionLabel} text-center`}>Simulace regulačního pochodu s PID regulátorem</h2>
+                  <div className="h-[360px] sm:h-[520px]">
+                    <Sim sim_points={sim_points} y0={y0} theme={theme} />
+                  </div>
+                </section>
 
-              <section className={`${panelClass} lg:col-span-3`}>
-                <h2 className={sectionLabel}>Kvalita regulace</h2>
-                {metrics && <MetricsTable metrics={metrics} theme={theme} />}
-                <div
-                  className={`mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[11px] italic leading-relaxed ${
-                    isDark ? 'text-slate-400' : 'text-slate-600'
-                  }`}
-                >
-                  IAE a ITAE charakterizují celkovou regulační chybu. Čím nižší hodnota, tím kvalitnější nastavení.
-                </div>
-              </section>
-            </div>
+                <section className={`${panelClass} lg:col-span-3`}>
+                  <h2 className={sectionLabel}>Kvalita regulace</h2>
+                  {metrics && <MetricsTable metrics={metrics} theme={theme} />}
+                  <div
+                    className={`mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[11px] italic leading-relaxed ${
+                      isDark ? 'text-slate-400' : 'text-slate-600'
+                    }`}
+                  >
+                    IAE a ITAE charakterizují celkovou regulační chybu. Čím nižší hodnota, tím kvalitnější nastavení.
+                  </div>
+                </section>
+              </div>
+            )}
           </div>
         )}
       </div>
