@@ -4,6 +4,7 @@ import PidTable from './PIDtable';
 import Step from './Step';
 import Sim from './Sim';
 import MetricsTable from './MetricsTable';
+import StabilityPanel from './StabilityPanel';
 
 function App() {
   const [pidData, setPidData] = useState(null);
@@ -18,6 +19,7 @@ function App() {
   const [controllerType, setControllerType] = useState('PID');
   const [lambdaAlpha, setLambdaAlpha] = useState(2.0);
   const [metrics, setMetrics] = useState(null);
+  const [stability, setStability] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('pid_theme') || 'dark');
   const isDark = theme === 'dark';
@@ -30,6 +32,7 @@ function App() {
     setSimParams(null);
     setY0(null);
     setMetrics(null);
+    setStability(null);
   };
 
   const handleRequestEnd = () => {
@@ -47,10 +50,12 @@ function App() {
         ? { K: result.K, T: result.T, L: result.L }
         : null
     );
-    setSimParams(result.sim_points);
+    setSimParams(result.closed_loop_stable ? result.sim_points : []);
     setY0(result.y0);
+    setStability(result.stability || null);
+    const showMetrics = result.closed_loop_stable && result.overshoot !== undefined;
     setMetrics(
-      result.overshoot !== undefined
+      showMetrics
         ? {
             overshoot: result.overshoot,
             settlingTime: result.settlingtime,
@@ -278,6 +283,8 @@ function App() {
                 </div>
               </section>
             </div>
+
+            {stability && <StabilityPanel stability={stability} theme={theme} />}
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
               <section className={`${panelClass} lg:col-span-9`}>

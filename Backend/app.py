@@ -11,6 +11,7 @@ from CHR_20_POZ_H import CHR_20 as CHR_20_POZ_H
 from CHR_0_POT_P import CHR_0_POT_P
 from CHR_20_POT_P import CHR_20_POT_P
 from IMC import IMC
+from stability import analyze_closed_loop_stability
 
 app = Flask(__name__)
 
@@ -291,15 +292,31 @@ def calculate():
         Ki_PI, Ki_PID,
         Kd_PID, Kp_PD, Kd_PD
     )
+
     try:
-        # Funkce simulate nyní vrací slovník se sim_points, metrics a step_data
-        sim_results = simulate(system, Kp, Ki, Kd, Params, y0)
-        sim_points = sim_results["sim_points"]
-        metrics = sim_results["metrics"]
-        step_data = sim_results["step_data"]
-        
+        stability = analyze_closed_loop_stability(system, Kp, Ki, Kd)
     except Exception as e:
-        return jsonify({'error': f'Chyba simulace: {str(e)}'}), 500
+        return jsonify({'error': f'Chyba analýzy stability: {str(e)}'}), 500
+
+    closed_loop_stable = stability["stable"]
+    sim_points = []
+    metrics = {
+        "overshoot": 0,
+        "settling_time": None,
+        "IAE": 0,
+        "ITAE": 0,
+        "settling_status": None,
+    }
+    step_data = {"w": [], "t": [], "y": []}
+
+    if closed_loop_stable:
+        try:
+            sim_results = simulate(system, Kp, Ki, Kd, Params, y0)
+            sim_points = sim_results["sim_points"]
+            metrics = sim_results["metrics"]
+            step_data = sim_results["step_data"]
+        except Exception as e:
+            return jsonify({'error': f'Chyba simulace: {str(e)}'}), 500
 
     # --- 6. Sestavení odpovědi ---
     response_payload = {
@@ -308,17 +325,17 @@ def calculate():
         'pid': pid_coeffs,
         'model_type': model_type,
         'y0': y0,
+        'closed_loop_stable': closed_loop_stable,
+        'stability': stability,
         'sim_points': sim_points,
-        # Data ze slovníku metrics (vypočítaná uvnitř simulate)
         'overshoot': metrics["overshoot"],
         'settlingtime': metrics["settling_time"],
         'settling_status': metrics.get("settling_status"),
         'IAE': metrics["IAE"],
         'ITAE': metrics["ITAE"],
-        # Data pro detailní graf přechodového děje
         'step w': step_data["w"],
         'step t': step_data["t"],
-        'step y': step_data["y"]
+        'step y': step_data["y"],
     }
 
     if used_fopdt_approximation:
