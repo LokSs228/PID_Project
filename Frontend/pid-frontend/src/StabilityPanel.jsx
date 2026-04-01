@@ -1,5 +1,5 @@
 import React from 'react';
-import ComplexPolePlot from './ComplexPolePlot';
+import StabilityPoleChart from './StabilityPoleChart';
 
 function StabilityPanel({ stability, theme }) {
   if (!stability || typeof stability.stable !== 'boolean') return null;
@@ -106,7 +106,7 @@ function StabilityPanel({ stability, theme }) {
                 </tbody>
               </table>
             </div>
-            <ComplexPolePlot variant="z" poles={polesZ} theme={theme} />
+            <StabilityPoleChart variant="z" poles={polesZ} theme={theme} />
           </div>
         </div>
 
@@ -131,7 +131,7 @@ function StabilityPanel({ stability, theme }) {
                 </tbody>
               </table>
             </div>
-            <ComplexPolePlot variant="s" poles={polesS} theme={theme} />
+            <StabilityPoleChart variant="s" poles={polesS} theme={theme} />
           </div>
         </div>
 
