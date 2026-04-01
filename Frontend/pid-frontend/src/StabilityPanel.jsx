@@ -17,6 +17,8 @@ function StabilityPanel({ stability, theme }) {
   const disc = discrete || {};
   const polesZ = disc.poles_z || [];
   const dt = disc.dt;
+  const t7Echo = disc.t7;
+  const stepsPerSim = disc.steps_per_sim;
   const polesS = continuous?.poles || [];
 
   const cardClass = `rounded-2xl border overflow-hidden ${
@@ -53,7 +55,16 @@ function StabilityPanel({ stability, theme }) {
           </h3>
           {dt != null && (
             <p className={`mt-1 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-              Krok diskrétizace ve stejné simulaci: <span className="font-mono">T = {Number(dt).toFixed(6)}</span> s
+              Krok diskrétizace: <span className="font-mono">T = t7 / {stepsPerSim ?? 1500}</span>
+              {t7Echo != null && (
+                <>
+                  {' '}
+                  — aktuálně{' '}
+                  <span className="font-mono">
+                    t7 = {Number(t7Echo).toFixed(3)} s → T = {Number(dt).toFixed(6)} s
+                  </span>
+                </>
+              )}
             </p>
           )}
         </div>

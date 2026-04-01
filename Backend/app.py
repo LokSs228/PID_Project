@@ -304,6 +304,9 @@ def calculate():
     except Exception as e:
         return jsonify({'error': f'Chyba analýzy stability: {str(e)}'}), 500
 
+    stability['discrete']['t7'] = float(t7_val)
+    stability['discrete']['steps_per_sim'] = 1500
+
     closed_loop_stable = stability["discrete_stable"]
     sim_points = []
     metrics = {

@@ -46,6 +46,9 @@ function TransferFunctionInput({
     isDark ? 'border border-slate-700/70 bg-slate-900/90 text-slate-100' : 'border border-slate-300 bg-white text-slate-900'
   }`;
 
+  /** Musí odpovídat pořadí v Backendu: Params[6] = t7, Params[9]=td, Params[10]=d (y0 se neposílá zde). */
+  const CALC_TIME_PARAM_KEYS = ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 'w1', 'w2', 'td', 'd'];
+
   const handleTimeParamChange = (e) => {
     const { name, value } = e.target;
     setTimeParams((prev) => ({ ...prev, [name]: value }));
@@ -70,7 +73,7 @@ function TransferFunctionInput({
         T_num: T_num.filter((val) => val !== ''),
         T_den: T_den.filter((val) => val !== ''),
         Method: method,
-        timeParams: Object.values(timeParams).map(parseFloat),
+        timeParams: CALC_TIME_PARAM_KEYS.map((key) => parseFloat(timeParams[key])),
         y0: parseFloat(y0),
         lambdaAlpha,
       };

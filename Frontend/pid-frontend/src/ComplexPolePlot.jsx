@@ -76,10 +76,14 @@ function ComplexPolePlot({ variant, poles, theme }) {
   const labelFill = isDark ? '#94a3b8' : '#64748b';
 
   const [ox0, oy0] = mapPoint(0, 0, xMin, xMax, yMin, yMax);
-  const [ox1, oy1] = mapPoint(xMax, 0, xMin, xMax, yMin, yMax);
-  const [ox2, oy2] = mapPoint(xMin, 0, xMin, xMax, yMin, yMax);
+  const [ox1] = mapPoint(xMax, 0, xMin, xMax, yMin, yMax);
+  const [ox2] = mapPoint(xMin, 0, xMin, xMax, yMin, yMax);
+  const [rx1, ry1] = mapPoint(1, 0, xMin, xMax, yMin, yMax);
+  const [, iy1] = mapPoint(0, 1, xMin, xMax, yMin, yMax);
   const [, oyB] = mapPoint(0, yMin, xMin, xMax, yMin, yMax);
   const [, oyD] = mapPoint(0, yMax, xMin, xMax, yMin, yMax);
+  const showRe1 = xMin <= 1 + 1e-9 && xMax >= 1 - 1e-9;
+  const showIm1 = yMin <= 1 + 1e-9 && yMax >= 1 - 1e-9;
 
   return (
     <div className="flex w-full flex-col items-center">
@@ -124,6 +128,10 @@ function ComplexPolePlot({ variant, poles, theme }) {
           />
         )}
 
+        {variant === 'z' && showRe1 && (
+          <circle cx={rx1} cy={ry1} r={6} fill="none" stroke={unitStroke} strokeWidth={1.6} />
+        )}
+
         {pts.map((p, i) => {
           const [sx, sy] = mapPoint(p.re, p.im, xMin, xMax, yMin, yMax);
           const inside = variant === 'z' ? Math.hypot(p.re, p.im) < 1 - 1e-6 : p.re < -1e-6;
@@ -131,6 +139,20 @@ function ComplexPolePlot({ variant, poles, theme }) {
             <circle key={`${p.re}-${p.im}-${i}`} cx={sx} cy={sy} r={5} fill={inside ? poleIn : poleOut} stroke={isDark ? '#0f172a' : '#fff'} strokeWidth={1} />
           );
         })}
+
+        <text x={ox0 - 14} y={oy0 + 14} textAnchor="middle" fill={labelFill} fontSize={11} fontWeight={600}>
+          0
+        </text>
+        {showRe1 && (
+          <text x={rx1} y={ry1 - 10} textAnchor="middle" fill={labelFill} fontSize={11} fontWeight={600}>
+            1
+          </text>
+        )}
+        {variant === 'z' && showIm1 && (
+          <text x={ox0 + 12} y={iy1} dominantBaseline="middle" textAnchor="start" fill={labelFill} fontSize={11} fontWeight={600}>
+            1
+          </text>
+        )}
 
         <text x={W - PAD} y={PAD + 4} textAnchor="end" fill={labelFill} fontSize={9} fontWeight={600}>
           {variant === 'z' ? 'Im z' : 'Im s'}
