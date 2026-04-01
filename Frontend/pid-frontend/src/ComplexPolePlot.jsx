@@ -2,7 +2,7 @@ import React from 'react';
 
 const W = 320;
 const H = 320;
-const PAD = 28;
+const PAD = 32;
 
 function mapPoint(re, im, xMin, xMax, yMin, yMax) {
   const pw = W - 2 * PAD;
@@ -68,12 +68,14 @@ function ComplexPolePlot({ variant, poles, theme }) {
     yMax = maxIm + pad;
   }
 
-  const axisStroke = isDark ? '#64748b' : '#94a3b8';
-  const unitStroke = isDark ? '#38bdf8' : '#0284c7';
+  const axisStroke = isDark ? '#94a3b8' : '#64748b';
+  const unitStroke = isDark ? '#38bdf8' : '#0369a1';
+  const unitStrokeHi = isDark ? '#7dd3fc' : '#0ea5e9';
   const lhpFill = isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.18)';
   const poleIn = isDark ? '#34d399' : '#059669';
   const poleOut = isDark ? '#fb7185' : '#e11d48';
-  const labelFill = isDark ? '#94a3b8' : '#64748b';
+  const numFill = isDark ? '#f1f5f9' : '#0f172a';
+  const axisLabelFill = isDark ? '#cbd5e1' : '#475569';
 
   const [ox0, oy0] = mapPoint(0, 0, xMin, xMax, yMin, yMax);
   const [ox1] = mapPoint(xMax, 0, xMin, xMax, yMin, yMax);
@@ -84,6 +86,14 @@ function ComplexPolePlot({ variant, poles, theme }) {
   const [, oyD] = mapPoint(0, yMax, xMin, xMax, yMin, yMax);
   const showRe1 = xMin <= 1 + 1e-9 && xMax >= 1 - 1e-9;
   const showIm1 = yMin <= 1 + 1e-9 && yMax >= 1 - 1e-9;
+  const showReNeg1 = xMin <= -1 + 1e-9 && xMax >= -1 - 1e-9;
+  const showImNeg1 = yMin <= -1 + 1e-9 && yMax >= -1 - 1e-9;
+  const [rxN1, ryN1] = mapPoint(-1, 0, xMin, xMax, yMin, yMax);
+  const [, iyN1] = mapPoint(0, -1, xMin, xMax, yMin, yMax);
+  const tick = 7;
+
+  const reName = variant === 'z' ? 'Re z' : 'Re s';
+  const imName = variant === 'z' ? 'Im z' : 'Im s';
 
   return (
     <div className="flex w-full flex-col items-center">
@@ -104,8 +114,8 @@ function ComplexPolePlot({ variant, poles, theme }) {
           return <polygon fill={lhpFill} points={`${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${c3[0]},${c3[1]} ${c4[0]},${c4[1]}`} />;
         })()}
 
-        <line x1={ox2} y1={oy0} x2={ox1} y2={oy0} stroke={axisStroke} strokeWidth={1.2} />
-        <line x1={ox0} y1={oyB} x2={ox0} y2={oyD} stroke={axisStroke} strokeWidth={1.2} />
+        <line x1={ox2} y1={oy0} x2={ox1} y2={oy0} stroke={axisStroke} strokeWidth={1.5} />
+        <line x1={ox0} y1={oyB} x2={ox0} y2={oyD} stroke={axisStroke} strokeWidth={1.5} />
 
         {variant === 's' && xMin < 0 && xMax >= 0 && (
           <line
@@ -114,22 +124,62 @@ function ComplexPolePlot({ variant, poles, theme }) {
             x2={ox0}
             y2={Math.max(oyB, oyD)}
             stroke={isDark ? '#fbbf24' : '#d97706'}
-            strokeWidth={1.5}
-            strokeDasharray="4 3"
+            strokeWidth={1.8}
+            strokeDasharray="5 4"
           />
         )}
+
+        {/* Osy popisky u směru kladných os */}
+        <text
+          x={Math.min(ox1 - 4, W - PAD)}
+          y={oy0 + 18}
+          textAnchor="end"
+          fill={axisLabelFill}
+          fontSize={12}
+          fontWeight={700}
+        >
+          {reName}
+        </text>
+        <text
+          x={ox0 + 10}
+          y={Math.max(oyD - 6, PAD)}
+          textAnchor="start"
+          fill={axisLabelFill}
+          fontSize={12}
+          fontWeight={700}
+        >
+          {imName}
+        </text>
 
         {variant === 'z' && (
           <polyline
             points={circlePolylinePoints(xMin, xMax, yMin, yMax, 1)}
             fill="none"
             stroke={unitStroke}
-            strokeWidth={1.8}
+            strokeWidth={2.8}
+            opacity={0.95}
           />
         )}
 
         {variant === 'z' && showRe1 && (
-          <circle cx={rx1} cy={ry1} r={6} fill="none" stroke={unitStroke} strokeWidth={1.6} />
+          <>
+            <circle cx={rx1} cy={ry1} r={9} fill="none" stroke={unitStrokeHi} strokeWidth={2.4} />
+            <circle cx={rx1} cy={ry1} r={11} fill="none" stroke={unitStroke} strokeWidth={1} opacity={0.5} />
+          </>
+        )}
+
+        {/* Měřítkové značky ±1 u os */}
+        {showRe1 && (
+          <line x1={rx1} y1={ry1 - tick} x2={rx1} y2={ry1 + tick} stroke={axisStroke} strokeWidth={1.8} />
+        )}
+        {showReNeg1 && (
+          <line x1={rxN1} y1={ryN1 - tick} x2={rxN1} y2={ryN1 + tick} stroke={axisStroke} strokeWidth={1.8} />
+        )}
+        {showIm1 && (
+          <line x1={ox0 - tick} y1={iy1} x2={ox0 + tick} y2={iy1} stroke={axisStroke} strokeWidth={1.8} />
+        )}
+        {showImNeg1 && (
+          <line x1={ox0 - tick} y1={iyN1} x2={ox0 + tick} y2={iyN1} stroke={axisStroke} strokeWidth={1.8} />
         )}
 
         {pts.map((p, i) => {
@@ -140,26 +190,39 @@ function ComplexPolePlot({ variant, poles, theme }) {
           );
         })}
 
-        <text x={ox0 - 14} y={oy0 + 14} textAnchor="middle" fill={labelFill} fontSize={11} fontWeight={600}>
+        <text x={ox0 - 16} y={oy0 + 16} textAnchor="middle" fill={numFill} fontSize={13} fontWeight={700}>
           0
         </text>
         {showRe1 && (
-          <text x={rx1} y={ry1 - 10} textAnchor="middle" fill={labelFill} fontSize={11} fontWeight={600}>
+          <text x={rx1} y={ry1 + tick + 15} textAnchor="middle" fill={numFill} fontSize={13} fontWeight={700}>
             1
+          </text>
+        )}
+        {showReNeg1 && (
+          <text x={rxN1} y={ryN1 + tick + 15} textAnchor="middle" fill={numFill} fontSize={12} fontWeight={600}>
+            −1
           </text>
         )}
         {variant === 'z' && showIm1 && (
-          <text x={ox0 + 12} y={iy1} dominantBaseline="middle" textAnchor="start" fill={labelFill} fontSize={11} fontWeight={600}>
+          <text x={ox0 + tick + 10} y={iy1 + 5} textAnchor="start" fill={numFill} fontSize={13} fontWeight={700}>
             1
           </text>
         )}
-
-        <text x={W - PAD} y={PAD + 4} textAnchor="end" fill={labelFill} fontSize={9} fontWeight={600}>
-          {variant === 'z' ? 'Im z' : 'Im s'}
-        </text>
-        <text x={W - PAD - 4} y={H - PAD + 14} textAnchor="end" fill={labelFill} fontSize={9} fontWeight={600}>
-          {variant === 'z' ? 'Re z' : 'Re s'}
-        </text>
+        {variant === 'z' && showImNeg1 && (
+          <text x={ox0 + tick + 10} y={iyN1 + 5} textAnchor="start" fill={numFill} fontSize={12} fontWeight={600}>
+            −1
+          </text>
+        )}
+        {variant === 's' && showIm1 && (
+          <text x={ox0 + tick + 10} y={iy1 + 5} textAnchor="start" fill={numFill} fontSize={13} fontWeight={700}>
+            1
+          </text>
+        )}
+        {variant === 's' && showImNeg1 && (
+          <text x={ox0 + tick + 10} y={iyN1 + 5} textAnchor="start" fill={numFill} fontSize={12} fontWeight={600}>
+            −1
+          </text>
+        )}
       </svg>
       <div
         className={`mt-1 flex gap-3 text-[9px] font-medium uppercase tracking-wide ${
