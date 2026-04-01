@@ -10,7 +10,73 @@ import {
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
 
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, ScatterController);
+const EqualUnitScalePlugin = {
+  id: 'equalUnitScale',
+  afterLayout(chart, _args, pluginOptions) {
+    if (!pluginOptions?.enabled || chart.$equalUnitScaleUpdating) {
+      return;
+    }
+
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    const area = chart.chartArea;
+    if (!xScale || !yScale || !area) {
+      return;
+    }
+
+    const width = area.right - area.left;
+    const height = area.bottom - area.top;
+    const xRange = Number(xScale.max) - Number(xScale.min);
+    const yRange = Number(yScale.max) - Number(yScale.min);
+    const xCenter = (Number(xScale.max) + Number(xScale.min)) / 2;
+    const yCenter = (Number(yScale.max) + Number(yScale.min)) / 2;
+    if (
+      width <= 0 ||
+      height <= 0 ||
+      !Number.isFinite(xRange) ||
+      !Number.isFinite(yRange) ||
+      xRange <= 0 ||
+      yRange <= 0 ||
+      !Number.isFinite(xCenter) ||
+      !Number.isFinite(yCenter)
+    ) {
+      return;
+    }
+
+    // Keep equal units on X/Y without clipping existing content: expand only.
+    const unitPerPx = Math.max(xRange / width, yRange / height);
+    const targetXRange = unitPerPx * width;
+    const targetYRange = unitPerPx * height;
+
+    const nextXMin = xCenter - targetXRange / 2;
+    const nextXMax = xCenter + targetXRange / 2;
+    const nextYMin = yCenter - targetYRange / 2;
+    const nextYMax = yCenter + targetYRange / 2;
+
+    const currXMin = Number(xScale.options.min);
+    const currXMax = Number(xScale.options.max);
+    const currYMin = Number(yScale.options.min);
+    const currYMax = Number(yScale.options.max);
+    const changed =
+      Math.abs(currXMin - nextXMin) > 1e-6 ||
+      Math.abs(currXMax - nextXMax) > 1e-6 ||
+      Math.abs(currYMin - nextYMin) > 1e-6 ||
+      Math.abs(currYMax - nextYMax) > 1e-6;
+    if (!changed) {
+      return;
+    }
+
+    xScale.options.min = nextXMin;
+    xScale.options.max = nextXMax;
+    yScale.options.min = nextYMin;
+    yScale.options.max = nextYMax;
+    chart.$equalUnitScaleUpdating = true;
+    chart.update('none');
+    chart.$equalUnitScaleUpdating = false;
+  },
+};
+
+ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, ScatterController, EqualUnitScalePlugin);
 
 const CIRCLE_SEG = 144;
 
@@ -95,22 +161,22 @@ function StabilityPoleChart({ variant, poles, theme }) {
               label: '|z| < 1',
               data: inside.map((p) => ({ x: p.re, y: p.im })),
               showLine: false,
-              pointRadius: 7,
-              pointHoverRadius: 9,
+              pointRadius: 4,
+              pointHoverRadius: 6,
               backgroundColor: isDark ? '#34d399' : '#059669',
               borderColor: isDark ? '#064e3b' : '#ecfdf5',
-              borderWidth: 1.5,
+              borderWidth: 1.2,
               order: 1,
             },
             {
               label: '|z| ≥ 1',
               data: outside.map((p) => ({ x: p.re, y: p.im })),
               showLine: false,
-              pointRadius: 7,
-              pointHoverRadius: 9,
+              pointRadius: 4,
+              pointHoverRadius: 6,
               backgroundColor: isDark ? '#fb7185' : '#e11d48',
               borderColor: isDark ? '#450a0a' : '#fff1f2',
-              borderWidth: 1.5,
+              borderWidth: 1.2,
               order: 1,
             },
           ],
@@ -146,22 +212,22 @@ function StabilityPoleChart({ variant, poles, theme }) {
         label: 'Re < 0',
         data: inside.map((p) => ({ x: p.re, y: p.im })),
         showLine: false,
-        pointRadius: 7,
-        pointHoverRadius: 9,
+        pointRadius: 4,
+        pointHoverRadius: 6,
         backgroundColor: isDark ? '#34d399' : '#059669',
         borderColor: isDark ? '#064e3b' : '#ecfdf5',
-        borderWidth: 1.5,
+        borderWidth: 1.2,
         order: 1,
       },
       {
         label: 'Re ≥ 0',
         data: outside.map((p) => ({ x: p.re, y: p.im })),
         showLine: false,
-        pointRadius: 7,
-        pointHoverRadius: 9,
+        pointRadius: 4,
+        pointHoverRadius: 6,
         backgroundColor: isDark ? '#fb7185' : '#e11d48',
         borderColor: isDark ? '#450a0a' : '#fff1f2',
-        borderWidth: 1.5,
+        borderWidth: 1.2,
         order: 1,
       }
     );
@@ -180,6 +246,9 @@ function StabilityPoleChart({ variant, poles, theme }) {
     maintainAspectRatio: false,
     interaction: { mode: 'nearest', intersect: false },
     plugins: {
+      equalUnitScale: {
+        enabled: variant === 'z',
+      },
       legend: {
         display: true,
         position: 'top',

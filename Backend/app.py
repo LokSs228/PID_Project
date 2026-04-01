@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from flask import Flask, request, jsonify
-from control import tf, step_response, pade
+from control import tf, step_response, pade, poles
 from zn_method import zn_method
 from Sim import simulate, simulation_indicates_instability
 from GA import genetic_algorithm
@@ -14,6 +14,9 @@ from IMC import IMC
 from stability import full_stability_report
 
 app = Flask(__name__)
+
+_TAU_EPS = 1e-9
+_SAMPLES_PER_TAU = 30.0
 
 def normalize_origin(origin):
     if origin is None:
@@ -117,6 +120,52 @@ def parse_nonneg_int(value, field_name):
     if iv < 0:
         raise ValueError(f'{field_name} musí být nezáporné celé číslo')
     return iv
+
+
+def estimate_tau_min(T_den_vals, base_system):
+    """
+    Odhad nejmenší časové konstanty tau:
+    1) preferujeme reálné kladné T ze vstupních (T*s + 1),
+    2) fallback na póly base_system: tau = 1 / |Re(p)|.
+    """
+    candidates = []
+
+    for t in T_den_vals:
+        z = complex(t)
+        if abs(z.imag) <= _TAU_EPS and float(z.real) > _TAU_EPS:
+            candidates.append(float(z.real))
+
+    if not candidates:
+        try:
+            p_arr = np.asarray(poles(base_system), dtype=complex).ravel()
+            for p in p_arr:
+                re_abs = abs(float(np.real(p)))
+                if re_abs > _TAU_EPS:
+                    candidates.append(1.0 / re_abs)
+        except Exception:
+            pass
+
+    if not candidates:
+        return 1.0
+    return float(min(candidates))
+
+
+def choose_dt_and_steps(t7, tau_min, samples_per_tau=_SAMPLES_PER_TAU):
+    t7 = float(t7)
+    tau_min = float(tau_min)
+    if t7 <= 0:
+        raise ValueError("t7 musí být > 0.")
+    if tau_min <= _TAU_EPS or not np.isfinite(tau_min):
+        target_dt = t7 / 1500.0
+    else:
+        target_dt = tau_min / float(samples_per_tau)
+
+    if target_dt <= 0 or not np.isfinite(target_dt):
+        target_dt = t7 / 1500.0
+
+    steps = max(2, int(np.ceil(t7 / target_dt)))
+    dt = t7 / float(steps)
+    return float(dt), int(steps)
 
 
 @app.route('/calculate', methods=['POST', 'OPTIONS'])
@@ -297,7 +346,8 @@ def calculate():
         t7_val = float(Params[6])
     except (TypeError, ValueError, IndexError):
         return jsonify({'error': 'Neplatný čas t7 v timeParams.'}), 400
-    sim_dt = t7_val / 1500.0
+    tau_min = estimate_tau_min(T_den_vals, base_system)
+    sim_dt, sim_steps = choose_dt_and_steps(t7_val, tau_min)
 
     try:
         stability = full_stability_report(system, Kp, Ki, Kd, sim_dt)
@@ -305,7 +355,8 @@ def calculate():
         return jsonify({'error': f'Chyba analýzy stability: {str(e)}'}), 500
 
     stability['discrete']['t7'] = float(t7_val)
-    stability['discrete']['steps_per_sim'] = 1500
+    stability['discrete']['steps_per_sim'] = int(sim_steps)
+    stability['discrete']['tau_min'] = float(tau_min)
 
     closed_loop_stable = stability["discrete_stable"]
     sim_points = []
@@ -320,7 +371,7 @@ def calculate():
 
     if closed_loop_stable:
         try:
-            sim_results = simulate(system, Kp, Ki, Kd, Params, y0)
+            sim_results = simulate(system, Kp, Ki, Kd, Params, y0, dt=sim_dt)
             sim_points = sim_results["sim_points"]
             metrics = sim_results["metrics"]
             step_data = sim_results["step_data"]

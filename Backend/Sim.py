@@ -43,7 +43,7 @@ def _build_reference_profile(t_values, t1, t2, t3, t4, t5, t6, w1, w2):
     return w_values
 
 
-def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
+def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0, dt=None):
     Kp, Ki, Kd = Kp_PID, Ki_PID, Kd_PID
     t1, t2, t3, t4, t5, t6, t7, w1, w2 = Params[:9]
     disturbance_time = Params[9] if len(Params) > 9 else np.inf
@@ -72,7 +72,12 @@ def simulate(system, Kp_PID, Ki_PID, Kd_PID, Params, y0):
     if t7 <= 0:
         raise ValueError("Neplatné časové parametry: t7 musí být > 0.")
 
-    dt = t7 / 1500.0
+    if dt is None:
+        dt = t7 / 1500.0
+    else:
+        dt = float(dt)
+    if dt <= 0:
+        raise ValueError("DiskretizaДЌnГ­ krok dt musГ­ bГЅt > 0.")
     t_values = np.arange(0.0, t7 + dt, dt, dtype=float)
     w_values = _build_reference_profile(t_values, t1, t2, t3, t4, t5, t6, w1, w2)
 

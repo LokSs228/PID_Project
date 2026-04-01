@@ -7,8 +7,6 @@ function StabilityPanel({ stability, theme }) {
   const isDark = theme === 'dark';
   const {
     stable,
-    discrete_stable: discOk,
-    continuous_poles_stable: contOk,
     simulation_indicates_unstable: simBad,
     discrete,
     continuous,
@@ -39,8 +37,6 @@ function StabilityPanel({ stability, theme }) {
   const tdClass = `px-3 py-2 font-mono text-xs tabular-nums ${isDark ? 'text-slate-100' : 'text-slate-900'}`;
 
   const sectionTitle = `mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${isDark ? 'text-slate-500' : 'text-slate-600'}`;
-  const showMismatchFooter =
-    typeof contOk === 'boolean' && typeof discOk === 'boolean' && contOk !== discOk;
 
   return (
     <section className={cardClass}>
@@ -134,16 +130,10 @@ function StabilityPanel({ stability, theme }) {
             <StabilityPoleChart variant="s" poles={polesS} theme={theme} />
           </div>
         </div>
-
-        {showMismatchFooter && polesS.length > 0 && (
-          <p className={`text-[10px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-            Závěr o stabilitě aplikace vychází z diskretního modelu (z); spojitá s-rovina slouží k porovnání s klasickou
-            syntézou v čase.
-          </p>
-        )}
       </div>
     </section>
   );
 }
 
 export default StabilityPanel;
+
