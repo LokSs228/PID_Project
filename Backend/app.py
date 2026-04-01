@@ -11,7 +11,7 @@ from CHR_20_POZ_H import CHR_20 as CHR_20_POZ_H
 from CHR_0_POT_P import CHR_0_POT_P
 from CHR_20_POT_P import CHR_20_POT_P
 from IMC import IMC
-from stability import analyze_closed_loop_stability
+from stability import full_stability_report
 
 app = Flask(__name__)
 
@@ -294,15 +294,17 @@ def calculate():
     )
 
     try:
-        stability = analyze_closed_loop_stability(system, Kp, Ki, Kd)
+        t7_val = float(Params[6])
+    except (TypeError, ValueError, IndexError):
+        return jsonify({'error': 'Neplatný čas t7 v timeParams.'}), 400
+    sim_dt = t7_val / 1500.0
+
+    try:
+        stability = full_stability_report(system, Kp, Ki, Kd, sim_dt)
     except Exception as e:
         return jsonify({'error': f'Chyba analýzy stability: {str(e)}'}), 500
 
-    continuous_poles_stable = stability["stable"]
-    stability["continuous_poles_stable"] = continuous_poles_stable
-    stability["simulation_indicates_unstable"] = False
-
-    closed_loop_stable = continuous_poles_stable
+    closed_loop_stable = stability["discrete_stable"]
     sim_points = []
     metrics = {
         "overshoot": 0,

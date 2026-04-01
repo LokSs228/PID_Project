@@ -4,7 +4,19 @@ function StabilityPanel({ stability, theme }) {
   if (!stability || typeof stability.stable !== 'boolean') return null;
 
   const isDark = theme === 'dark';
-  const { stable, poles, continuous_poles_stable: contOk, simulation_indicates_unstable: simBad } = stability;
+  const {
+    stable,
+    discrete_stable: discOk,
+    continuous_poles_stable: contOk,
+    simulation_indicates_unstable: simBad,
+    discrete,
+    continuous,
+  } = stability;
+
+  const disc = discrete || {};
+  const polesZ = disc.poles_z || [];
+  const dt = disc.dt;
+  const maxMod = disc.max_modulus;
 
   const cardClass = `rounded-2xl border overflow-hidden ${
     isDark ? 'border-slate-700/60 bg-slate-900/50' : 'border-slate-200 bg-white'
@@ -23,7 +35,9 @@ function StabilityPanel({ stability, theme }) {
   }`;
   const tdClass = `px-3 py-2 font-mono text-xs tabular-nums ${isDark ? 'text-slate-100' : 'text-slate-900'}`;
 
-  const skipSim = contOk === false;
+  const skipSim = discOk === false;
+  const showMismatchFooter =
+    typeof contOk === 'boolean' && typeof discOk === 'boolean' && contOk !== discOk;
 
   return (
     <section className={cardClass}>
@@ -32,9 +46,23 @@ function StabilityPanel({ stability, theme }) {
           isDark ? 'border-slate-700/60 bg-slate-800/60' : 'border-slate-200 bg-slate-50'
         }`}
       >
-        <h3 className={`text-xs font-semibold uppercase tracking-[0.12em] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-          Stabilita uzavřené smyčky
-        </h3>
+        <div>
+          <h3 className={`text-xs font-semibold uppercase tracking-[0.12em] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            Stabilita uzavřené smyčky (z-rovina)
+          </h3>
+          {dt != null && (
+            <p className={`mt-1 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+              Diskretizace jako ve simulaci: <span className="font-mono">T = {Number(dt).toFixed(6)}</span> s · kriterium{' '}
+              <span className={`font-mono ${isDark ? 'text-sky-300/90' : 'text-sky-700'}`}>|z| &lt; 1</span>
+              {maxMod != null && (
+                <>
+                  {' '}
+                  · max <span className="font-mono">|z|</span> = {Number(maxMod).toFixed(6)}
+                </>
+              )}
+            </p>
+          )}
+        </div>
         <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${badgeClass}`}>
           {stable ? 'Systém je stabilní' : 'Systém je nestabilní'}
         </span>
@@ -47,8 +75,8 @@ function StabilityPanel({ stability, theme }) {
               isDark ? 'border-amber-500/30 bg-amber-950/35 text-amber-100/90' : 'border-amber-300 bg-amber-50 text-amber-950'
             }`}
           >
-            Spojitý model má póly v levé polovině roviny, ale diskretní simulace (PID v čase) ukazuje neustálený nebo
-            divergentní chování — jako závěr se bere simulace.
+            Lineární diskretní model (|z| &lt; 1) předpovídá stabilitu, ale časová simulace v aplikaci ukazuje neustálený nebo
+            divergentní výstup (včetně vlivu omezení akční veličiny a tvaru trajektorie).
           </p>
         )}
         {!stable && skipSim && (
@@ -65,12 +93,12 @@ function StabilityPanel({ stability, theme }) {
           <table className="min-w-full border-collapse text-sm">
             <thead>
               <tr className={isDark ? 'bg-slate-800/40' : 'bg-slate-100'}>
-                <th className={thClass}>Re(p)</th>
-                <th className={thClass}>Im(p)</th>
+                <th className={thClass}>Re(z)</th>
+                <th className={thClass}>Im(z)</th>
               </tr>
             </thead>
             <tbody className={isDark ? 'divide-y divide-slate-800/80' : 'divide-y divide-slate-200'}>
-              {(poles || []).map((p, i) => (
+              {polesZ.map((p, i) => (
                 <tr key={`${p.re}-${p.im}-${i}`} className={isDark ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'}>
                   <td className={tdClass}>{Number(p.re).toFixed(6)}</td>
                   <td className={tdClass}>{Number(p.im).toFixed(6)}</td>
@@ -79,6 +107,13 @@ function StabilityPanel({ stability, theme }) {
             </tbody>
           </table>
         </div>
+
+        {showMismatchFooter && continuous?.poles?.length > 0 && (
+          <p className={`mt-3 text-[10px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+            Oproti ideálnímu spojitému modelu (s-rovina) se závěr odlišuje — pro reálnou implementaci PLC a programový PID je
+            rozhodující diskrétní kritérium uvnitř jednotkové kružnice.
+          </p>
+        )}
       </div>
     </section>
   );
