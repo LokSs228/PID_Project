@@ -17,6 +17,7 @@ app = Flask(__name__)
 
 _TAU_EPS = 1e-9
 _SAMPLES_PER_TAU = 30.0
+_PLOT_POINT_STRIDE = 30
 
 def normalize_origin(origin):
     if origin is None:
@@ -166,6 +167,25 @@ def choose_dt_and_steps(t7, tau_min, samples_per_tau=_SAMPLES_PER_TAU):
     steps = max(2, int(np.ceil(t7 / target_dt)))
     dt = t7 / float(steps)
     return float(dt), int(steps)
+
+
+def downsample_sim_points_for_plot(points, stride=_PLOT_POINT_STRIDE):
+    """
+    Zmenší počet bodů pro vykreslení ve frontendu pevnou decimací.
+    Metody/metriky se počítají z plné simulace; zde jen optimalizace payloadu.
+    """
+    if not points:
+        return []
+
+    pts = list(points)
+    stride = int(stride)
+    if stride <= 1:
+        return pts
+
+    out = [pts[i] for i in range(0, len(pts), stride)]
+    if (len(pts) - 1) % stride != 0:
+        out.append(pts[-1])
+    return out
 
 
 @app.route('/calculate', methods=['POST', 'OPTIONS'])
@@ -360,6 +380,7 @@ def calculate():
 
     closed_loop_stable = stability["discrete_stable"]
     sim_points = []
+    sim_points_total = 0
     metrics = {
         "overshoot": 0,
         "settling_time": None,
@@ -372,7 +393,8 @@ def calculate():
     if closed_loop_stable:
         try:
             sim_results = simulate(system, Kp, Ki, Kd, Params, y0, dt=sim_dt)
-            sim_points = sim_results["sim_points"]
+            sim_points_total = len(sim_results["sim_points"])
+            sim_points = downsample_sim_points_for_plot(sim_results["sim_points"])
             metrics = sim_results["metrics"]
             step_data = sim_results["step_data"]
             if simulation_indicates_instability(sim_results):
@@ -391,6 +413,9 @@ def calculate():
         'closed_loop_stable': closed_loop_stable,
         'stability': stability,
         'sim_points': sim_points,
+        'sim_points_total': sim_points_total,
+        'sim_points_plot': len(sim_points),
+        'sim_points_stride': int(_PLOT_POINT_STRIDE),
         'overshoot': metrics["overshoot"],
         'settlingtime': metrics["settling_time"],
         'settling_status': metrics.get("settling_status"),

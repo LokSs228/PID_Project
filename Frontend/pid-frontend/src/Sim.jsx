@@ -13,8 +13,9 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(LinearScale, CategoryScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function Sim({ sim_points, y0, theme }) {
+function Sim({ sim_points, y0, theme, lang = 'cz' }) {
   const isDark = theme === 'dark';
+  const isEn = lang === 'en';
   if (!sim_points || sim_points.length === 0) return null;
 
   const wData = sim_points.map((point) => ({ x: Number(point.t), y: Number(point.w) }));
@@ -24,7 +25,7 @@ function Sim({ sim_points, y0, theme }) {
   const data = {
     datasets: [
       {
-        label: 'Požadovaná hodnota (w)',
+        label: isEn ? 'Setpoint (w)' : 'Pozadovana hodnota (w)',
         data: wData,
         borderColor: '#94a3b8',
         borderDash: [5, 5],
@@ -32,7 +33,7 @@ function Sim({ sim_points, y0, theme }) {
         pointRadius: 0,
       },
       {
-        label: 'Výstup systému (y)',
+        label: isEn ? 'Plant output (y)' : 'Vystup systemu (y)',
         data: yData,
         borderColor: '#22d3ee',
         backgroundColor: 'rgba(34, 211, 238, 0.12)',
@@ -42,7 +43,7 @@ function Sim({ sim_points, y0, theme }) {
         tension: 0.12,
       },
       {
-        label: 'Řídicí vstup (u)',
+        label: isEn ? 'Control input (u)' : 'Ridici vstup (u)',
         data: uData,
         borderColor: '#34d399',
         borderWidth: 1.6,
@@ -50,7 +51,7 @@ function Sim({ sim_points, y0, theme }) {
         yAxisID: 'y1',
       },
       {
-        label: 'Počáteční bod (y₀)',
+        label: isEn ? 'Initial point (y0)' : 'Pocatecni bod (y0)',
         data: [{ x: Number(sim_points[0].t), y: Number(y0) }],
         borderColor: '#f43f5e',
         backgroundColor: '#f43f5e',
@@ -74,7 +75,7 @@ function Sim({ sim_points, y0, theme }) {
         labels: {
           color: isDark ? '#cbd5e1' : '#334155',
           usePointStyle: true,
-          font: { size: 11, weight: '600' },
+          font: { size: 12, weight: '600' },
         },
       },
       title: { display: false },
@@ -89,21 +90,21 @@ function Sim({ sim_points, y0, theme }) {
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Čas [s]', color: isDark ? '#94a3b8' : '#475569' },
+        title: { display: true, text: isEn ? 'Time [s]' : 'Cas [s]', color: isDark ? '#94a3b8' : '#475569' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
         ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
       y: {
         type: 'linear',
         position: 'left',
-        title: { display: true, text: 'Hodnota (w, y)', color: '#38bdf8' },
+        title: { display: true, text: isEn ? 'Value [w, y]' : 'Hodnota [w, y]', color: '#38bdf8' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
         ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
       y1: {
         type: 'linear',
         position: 'right',
-        title: { display: true, text: 'Řídicí vstup (u)', color: '#34d399' },
+        title: { display: true, text: isEn ? 'Control input (u)' : 'Ridici vstup (u)', color: '#34d399' },
         grid: { drawOnChartArea: false },
         ticks: { color: '#34d399' },
       },
@@ -118,4 +119,3 @@ function Sim({ sim_points, y0, theme }) {
 }
 
 export default Sim;
-

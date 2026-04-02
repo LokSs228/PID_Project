@@ -1,21 +1,29 @@
 import React from 'react';
 
-function PidTable({ data, theme }) {
+function PidTable({ data, theme, lang = 'cz' }) {
   if (!data) return null;
   const isDark = theme === 'dark';
+  const isEn = lang === 'en';
 
   const regulatorTypes = ['P', 'PI', 'PD', 'PID'];
-  const headers = ['Typ regulátoru', 'Kp', 'Ki', 'Kd'];
+  const headers = [isEn ? 'Controller' : 'Typ regulatoru', 'Kp', 'Ki', 'Kd'];
 
-  const formatValue = (val) => (val != null && typeof val === 'number' ? val.toFixed(4) : '—');
+  const formatValue = (val) => (val != null && typeof val === 'number' ? val.toFixed(4) : '-');
 
   return (
-    <div className={`overflow-x-auto rounded-2xl ${isDark ? 'border border-slate-700/60 bg-slate-900/50' : 'border border-slate-200 bg-white'}`}>
+    <div
+      className={`overflow-x-auto rounded-2xl ${
+        isDark ? 'border border-slate-700/60 bg-slate-900/50' : 'border border-slate-200 bg-white'
+      }`}
+    >
       <table className={`min-w-full border-collapse text-left text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
         <thead className={isDark ? 'border-b border-slate-700/60 bg-slate-800/70' : 'border-b border-slate-200 bg-slate-100'}>
           <tr>
             {headers.map((head) => (
-              <th key={head} className={`px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <th
+                key={head}
+                className={`px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
+              >
                 {head}
               </th>
             ))}
@@ -35,9 +43,15 @@ function PidTable({ data, theme }) {
                   {type}
                 </span>
               </td>
-              <td className={`px-5 py-3 font-mono tabular-nums ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{formatValue(data[type]?.Kp)}</td>
-              <td className={`px-5 py-3 font-mono tabular-nums ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{formatValue(data[type]?.Ki)}</td>
-              <td className={`px-5 py-3 font-mono tabular-nums ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{formatValue(data[type]?.Kd)}</td>
+              <td className={`px-5 py-3 font-mono tabular-nums ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                {formatValue(data[type]?.Kp)}
+              </td>
+              <td className={`px-5 py-3 font-mono tabular-nums ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                {formatValue(data[type]?.Ki)}
+              </td>
+              <td className={`px-5 py-3 font-mono tabular-nums ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                {formatValue(data[type]?.Kd)}
+              </td>
             </tr>
           ))}
         </tbody>

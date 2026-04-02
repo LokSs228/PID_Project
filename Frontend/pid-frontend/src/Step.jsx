@@ -13,8 +13,9 @@ import {
 
 ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-function Step({ points, approxModel, theme }) {
+function Step({ points, approxModel, theme, lang = 'cz' }) {
   const isDark = theme === 'dark';
+  const isEn = lang === 'en';
   const pointArray = points?.points || [];
   const aproArray = points?.apro_points || [];
   const k = Number(approxModel?.K);
@@ -22,14 +23,14 @@ function Step({ points, approxModel, theme }) {
   const l = Number(approxModel?.L);
   const showApproxParams = Number.isFinite(k) && Number.isFinite(t) && Number.isFinite(l) && t > 0;
 
-  const formatParam = (val) => (Number.isFinite(val) ? val.toFixed(4) : '—');
+  const formatParam = (val) => (Number.isFinite(val) ? val.toFixed(4) : '-');
 
   if (pointArray.length === 0) return null;
 
   const data = {
     datasets: [
       {
-        label: 'Reálná odezva y(t)',
+        label: isEn ? 'Measured response y(t)' : 'Realna odezva y(t)',
         data: pointArray.map((p) => ({ x: p.t, y: p.y })),
         borderColor: '#38bdf8',
         backgroundColor: 'rgba(56, 189, 248, 0.12)',
@@ -39,7 +40,7 @@ function Step({ points, approxModel, theme }) {
         borderWidth: 2.5,
       },
       aproArray.length > 0 && {
-        label: 'Aproximovaná FOPDT odezva',
+        label: isEn ? 'FOPDT approximation' : 'Aproximovana FOPDT odezva',
         data: aproArray.map((p) => ({ x: p.t, y: p.y })),
         borderColor: '#f59e0b',
         backgroundColor: 'transparent',
@@ -82,12 +83,22 @@ function Step({ points, approxModel, theme }) {
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: 'Čas [s]', color: isDark ? '#94a3b8' : '#475569', font: { size: 11, weight: '600' } },
+        title: {
+          display: true,
+          text: isEn ? 'Time [s]' : 'Cas [s]',
+          color: isDark ? '#94a3b8' : '#475569',
+          font: { size: 11, weight: '600' },
+        },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
         ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
       y: {
-        title: { display: true, text: 'Amplituda y(t)', color: isDark ? '#94a3b8' : '#475569', font: { size: 11, weight: '600' } },
+        title: {
+          display: true,
+          text: isEn ? 'Amplitude y(t)' : 'Amplituda y(t)',
+          color: isDark ? '#94a3b8' : '#475569',
+          font: { size: 11, weight: '600' },
+        },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
         ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
@@ -98,11 +109,33 @@ function Step({ points, approxModel, theme }) {
     <div className="h-full min-h-[340px] w-full overflow-hidden">
       {showApproxParams && (
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-          <div className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>Aproximovaný FOPDT model</div>
+          <div
+            className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}
+          >
+            {isEn ? 'Approximated FOPDT model' : 'Aproximovany FOPDT model'}
+          </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className={`rounded-md border p-2 text-center ${isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'}`}>K = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(k)}</span></div>
-            <div className={`rounded-md border p-2 text-center ${isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'}`}>T = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(t)}</span></div>
-            <div className={`rounded-md border p-2 text-center ${isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'}`}>L = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(l)}</span></div>
+            <div
+              className={`rounded-md border p-2 text-center ${
+                isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'
+              }`}
+            >
+              K = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(k)}</span>
+            </div>
+            <div
+              className={`rounded-md border p-2 text-center ${
+                isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'
+              }`}
+            >
+              T = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(t)}</span>
+            </div>
+            <div
+              className={`rounded-md border p-2 text-center ${
+                isDark ? 'border-amber-400/30 bg-slate-900/60 text-slate-200' : 'border-amber-300 bg-white text-slate-800'
+              }`}
+            >
+              L = <span className={`font-mono ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>{formatParam(l)}</span>
+            </div>
           </div>
         </div>
       )}
@@ -112,4 +145,3 @@ function Step({ points, approxModel, theme }) {
 }
 
 export default Step;
-

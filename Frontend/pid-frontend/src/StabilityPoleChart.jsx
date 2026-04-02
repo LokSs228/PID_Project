@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -43,7 +43,6 @@ const EqualUnitScalePlugin = {
       return;
     }
 
-    // Keep equal units on X/Y without clipping existing content: expand only.
     const unitPerPx = Math.max(xRange / width, yRange / height);
     const targetXRange = unitPerPx * width;
     const targetYRange = unitPerPx * height;
@@ -83,8 +82,8 @@ const CIRCLE_SEG = 144;
 function unitCirclePoints() {
   const pts = [];
   for (let i = 0; i <= CIRCLE_SEG; i++) {
-    const t = (i / CIRCLE_SEG) * Math.PI * 2;
-    pts.push({ x: Math.cos(t), y: Math.sin(t) });
+    const tt = (i / CIRCLE_SEG) * Math.PI * 2;
+    pts.push({ x: Math.cos(tt), y: Math.sin(tt) });
   }
   return pts;
 }
@@ -124,14 +123,35 @@ function boundsS(poles) {
   };
 }
 
-/**
- * variant "z" — |z|=1 (čárkovaně), póly |z|<1 / |z|≥1
- * variant "s" — čára Re=0 (čárkovaně), póly Re<0 / Re≥0
- */
-function StabilityPoleChart({ variant, poles, theme }) {
+function StabilityPoleChart({ variant, poles, theme, lang = 'cz' }) {
   const isDark = theme === 'dark';
+  const isEn = lang === 'en';
 
-  const { data, xMin, xMax, yMin, yMax } = useMemo(() => {
+  const labels = isEn
+    ? {
+        zBoundary: '|z| = 1',
+        zInside: 'Stable poles |z| < 1',
+        zOutside: 'Unstable poles |z| >= 1',
+        sBoundary: 'Re = 0',
+        sInside: 'Stable poles Re < 0',
+        sOutside: 'Unstable poles Re >= 0',
+        re: 'Re',
+        im: 'Im',
+        absZ: '|z|',
+      }
+    : {
+    zBoundary: '|z| = 1',
+    zInside: 'Stabilni poly |z| < 1',
+    zOutside: 'Nestabilni poly |z| >= 1',
+    sBoundary: 'Re = 0',
+    sInside: 'Stabilni poly Re < 0',
+    sOutside: 'Nestabilni poly Re >= 0',
+    re: 'Re',
+    im: 'Im',
+    absZ: '|z|',
+  };
+
+  const { data, xMin, xMax, yMin, yMax } = (() => {
     const norm = (poles || []).map((p) => ({ re: Number(p.re), im: Number(p.im) }));
 
     if (variant === 'z') {
@@ -146,7 +166,7 @@ function StabilityPoleChart({ variant, poles, theme }) {
         data: {
           datasets: [
             {
-              label: '|z| = 1',
+              label: labels.zBoundary,
               data: unitCirclePoints(),
               showLine: true,
               pointRadius: 0,
@@ -158,22 +178,22 @@ function StabilityPoleChart({ variant, poles, theme }) {
               order: 2,
             },
             {
-              label: '|z| < 1',
+              label: labels.zInside,
               data: inside.map((p) => ({ x: p.re, y: p.im })),
               showLine: false,
-              pointRadius: 4,
-              pointHoverRadius: 6,
+              pointRadius: 3,
+              pointHoverRadius: 5,
               backgroundColor: isDark ? '#34d399' : '#059669',
               borderColor: isDark ? '#064e3b' : '#ecfdf5',
               borderWidth: 1.2,
               order: 1,
             },
             {
-              label: '|z| ≥ 1',
+              label: labels.zOutside,
               data: outside.map((p) => ({ x: p.re, y: p.im })),
               showLine: false,
-              pointRadius: 4,
-              pointHoverRadius: 6,
+              pointRadius: 3,
+              pointHoverRadius: 5,
               backgroundColor: isDark ? '#fb7185' : '#e11d48',
               borderColor: isDark ? '#450a0a' : '#fff1f2',
               borderWidth: 1.2,
@@ -192,7 +212,7 @@ function StabilityPoleChart({ variant, poles, theme }) {
     const ds = [];
     if (showBoundary) {
       ds.push({
-        label: 'Re = 0',
+        label: labels.sBoundary,
         data: [
           { x: 0, y: b.yMin },
           { x: 0, y: b.yMax },
@@ -209,22 +229,22 @@ function StabilityPoleChart({ variant, poles, theme }) {
     }
     ds.push(
       {
-        label: 'Re < 0',
+        label: labels.sInside,
         data: inside.map((p) => ({ x: p.re, y: p.im })),
         showLine: false,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointRadius: 3,
+        pointHoverRadius: 5,
         backgroundColor: isDark ? '#34d399' : '#059669',
         borderColor: isDark ? '#064e3b' : '#ecfdf5',
         borderWidth: 1.2,
         order: 1,
       },
       {
-        label: 'Re ≥ 0',
+        label: labels.sOutside,
         data: outside.map((p) => ({ x: p.re, y: p.im })),
         showLine: false,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointRadius: 3,
+        pointHoverRadius: 5,
         backgroundColor: isDark ? '#fb7185' : '#e11d48',
         borderColor: isDark ? '#450a0a' : '#fff1f2',
         borderWidth: 1.2,
@@ -239,7 +259,7 @@ function StabilityPoleChart({ variant, poles, theme }) {
       yMax: b.yMax,
       data: { datasets: ds },
     };
-  }, [variant, poles, isDark]);
+  })();
 
   const options = {
     responsive: true,
@@ -256,8 +276,8 @@ function StabilityPoleChart({ variant, poles, theme }) {
           color: isDark ? '#cbd5e1' : '#334155',
           usePointStyle: true,
           font: { size: 10, weight: '600' },
-          filter: (_item, chartData) => {
-            const d = chartData.datasets[_item.datasetIndex];
+          filter: (item, chartData) => {
+            const d = chartData.datasets[item.datasetIndex];
             return d.data && d.data.length > 0;
           },
         },
@@ -276,11 +296,11 @@ function StabilityPoleChart({ variant, poles, theme }) {
         callbacks: {
           label(ctx) {
             const { x, y } = ctx.parsed;
-            const lines = [`Re: ${x.toFixed(5)}`, `Im: ${y.toFixed(5)}`];
+            const rows = [`${labels.re}: ${x.toFixed(5)}`, `${labels.im}: ${y.toFixed(5)}`];
             if (variant === 'z') {
-              lines.push(`|z|: ${Math.hypot(x, y).toFixed(5)}`);
+              rows.push(`${labels.absZ}: ${Math.hypot(x, y).toFixed(5)}`);
             }
-            return lines;
+            return rows;
           },
         },
       },
@@ -292,7 +312,7 @@ function StabilityPoleChart({ variant, poles, theme }) {
         max: xMax,
         title: {
           display: true,
-          text: 'Re',
+          text: labels.re,
           color: isDark ? '#94a3b8' : '#475569',
           font: { size: 12, weight: '700' },
         },
@@ -305,7 +325,7 @@ function StabilityPoleChart({ variant, poles, theme }) {
         max: yMax,
         title: {
           display: true,
-          text: 'Im',
+          text: labels.im,
           color: isDark ? '#94a3b8' : '#475569',
           font: { size: 12, weight: '700' },
         },
