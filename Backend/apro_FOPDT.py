@@ -4,248 +4,262 @@ from threading import Lock
 from control import step_response
 from scipy.optimize import least_squares
 
-_FOPDT_CACHE_MAX = 256
-_fopdt_cache = OrderedDict()
-_fopdt_cache_lock = Lock()
-_L_ZERO_THRESHOLD_SAMPLES = 0.5
-_FOPDT_ULTRA_VERSION = 5
+FOPDT_CACHE_MAX = 256
+fopdt_cache = OrderedDict()
+fopdt_cache_lock = Lock()
+L_ZERO_THRESHOLD_SAMPLES = 0.5
+FOPDT_ULTRA_VERSION = 5
 
 
-def _coeff_signature(poly, ndigits=12):
-    arr = np.asarray(poly, dtype=complex).ravel()
-    arr = np.real_if_close(arr, tol=1000)
-    if np.iscomplexobj(arr):
-        return tuple((round(float(v.real), ndigits), round(float(v.imag), ndigits)) for v in arr)
-    return tuple(round(float(v), ndigits) for v in arr)
+def _coeff_signature(polynomial, ndigits=12):
+    coefficient_array = np.asarray(polynomial, dtype=complex).ravel()
+    coefficient_array = np.real_if_close(coefficient_array, tol=1000)
+
+    if np.iscomplexobj(coefficient_array):
+        return tuple(
+            (round(float(value.real), ndigits), round(float(value.imag), ndigits))
+            for value in coefficient_array
+        )
+
+    return tuple(round(float(value), ndigits) for value in coefficient_array)
 
 
 def _system_signature(system):
-    # Project uses SISO transfer functions.
-    num = system.num[0][0]
-    den = system.den[0][0]
-    return _coeff_signature(num), _coeff_signature(den)
+    numerator_coeffs = system.num[0][0]
+    denominator_coeffs = system.den[0][0]
+    return _coeff_signature(numerator_coeffs), _coeff_signature(denominator_coeffs)
 
 
 def _cache_get(cache_key):
-    with _fopdt_cache_lock:
-        value = _fopdt_cache.get(cache_key)
-        if value is not None:
-            _fopdt_cache.move_to_end(cache_key)
-        return value
+    with fopdt_cache_lock:
+        cached_value = fopdt_cache.get(cache_key)
+        if cached_value is not None:
+            fopdt_cache.move_to_end(cache_key)
+        return cached_value
 
 
 def _cache_set(cache_key, value):
-    with _fopdt_cache_lock:
-        _fopdt_cache[cache_key] = value
-        _fopdt_cache.move_to_end(cache_key)
-        while len(_fopdt_cache) > _FOPDT_CACHE_MAX:
-            _fopdt_cache.popitem(last=False)
+    with fopdt_cache_lock:
+        fopdt_cache[cache_key] = value
+        fopdt_cache.move_to_end(cache_key)
+        while len(fopdt_cache) > FOPDT_CACHE_MAX:
+            fopdt_cache.popitem(last=False)
 
 
-def _run_rls(y, u, n, lam=1.0, delta=1e6):
+def _run_rls(output_values, input_values, delay_samples, forgetting_factor=1.0, covariance_scale=1e6):
     """
     RLS estimation for ARX model:
-    y[k] = -a1*y[k-1] + b1*u[k-n] + b2*u[k-n-1]
+    y[k] = -a1*y[k-1] + b1*u[k-delay] + b2*u[k-delay-1]
     """
-    theta = np.zeros(3, dtype=float)
-    p_mat = np.eye(3, dtype=float) * delta
+    parameter_vector = np.zeros(3, dtype=float)
+    covariance_matrix = np.eye(3, dtype=float) * covariance_scale
     valid_samples = 0
 
-    for k in range(1, len(y)):
-        u_kn = u[k - n] if 0 <= (k - n) < len(u) else 0.0
-        u_kn1 = u[k - n - 1] if 0 <= (k - n - 1) < len(u) else 0.0
+    for sample_index in range(1, len(output_values)):
+        input_delayed = input_values[sample_index - delay_samples] if 0 <= (sample_index - delay_samples) < len(input_values) else 0.0
+        input_delayed_prev = (
+            input_values[sample_index - delay_samples - 1]
+            if 0 <= (sample_index - delay_samples - 1) < len(input_values)
+            else 0.0
+        )
 
-        phi = np.array([-y[k - 1], u_kn, u_kn1], dtype=float)
+        regressor = np.array([-output_values[sample_index - 1], input_delayed, input_delayed_prev], dtype=float)
 
-        denom = lam + phi @ p_mat @ phi
-        if denom <= 1e-12:
+        denominator = forgetting_factor + regressor @ covariance_matrix @ regressor
+        if denominator <= 1e-12:
             continue
 
-        gain = (p_mat @ phi) / denom
-        err = y[k] - phi @ theta
+        kalman_gain = (covariance_matrix @ regressor) / denominator
+        prediction_error = output_values[sample_index] - regressor @ parameter_vector
 
-        theta = theta + gain * err
-        p_mat = (p_mat - np.outer(gain, phi) @ p_mat) / lam
+        parameter_vector = parameter_vector + kalman_gain * prediction_error
+        covariance_matrix = (covariance_matrix - np.outer(kalman_gain, regressor) @ covariance_matrix) / forgetting_factor
 
         valid_samples += 1
 
     if valid_samples < 3:
         return None, np.inf
 
-    y_hat = np.zeros_like(y, dtype=float)
+    predicted_output = np.zeros_like(output_values, dtype=float)
 
-    for k in range(1, len(y)):
-        u_kn = u[k - n] if 0 <= (k - n) < len(u) else 0.0
-        u_kn1 = u[k - n - 1] if 0 <= (k - n - 1) < len(u) else 0.0
+    for sample_index in range(1, len(output_values)):
+        input_delayed = input_values[sample_index - delay_samples] if 0 <= (sample_index - delay_samples) < len(input_values) else 0.0
+        input_delayed_prev = (
+            input_values[sample_index - delay_samples - 1]
+            if 0 <= (sample_index - delay_samples - 1) < len(input_values)
+            else 0.0
+        )
 
-        y_hat[k] = -theta[0] * y[k - 1] + theta[1] * u_kn + theta[2] * u_kn1
+        predicted_output[sample_index] = (
+            -parameter_vector[0] * output_values[sample_index - 1]
+            + parameter_vector[1] * input_delayed
+            + parameter_vector[2] * input_delayed_prev
+        )
 
-    mse = float(np.mean((y[1:] - y_hat[1:]) ** 2))
-    return theta, mse
-
-
-def _fopdt_step_response(t, K, T, L):
-    """Step response of FOPDT model."""
-    t = np.asarray(t, dtype=float)
-    tau = np.maximum(t - L, 0.0)
-    y = K * (1.0 - np.exp(-tau / T))
-    y[t < L] = 0.0
-    return y
+    mse_value = float(np.mean((output_values[1:] - predicted_output[1:]) ** 2))
+    return parameter_vector, mse_value
 
 
-def _first_crossing_time(t, y, target):
-    """Return first crossing time of y(t) with interpolation."""
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float)
+def _fopdt_step_response(time_values, process_gain, time_constant, delay_time):
+    time_values = np.asarray(time_values, dtype=float)
+    shifted_time = np.maximum(time_values - delay_time, 0.0)
+    output_values = process_gain * (1.0 - np.exp(-shifted_time / time_constant))
+    output_values[time_values < delay_time] = 0.0
+    return output_values
 
-    if len(t) < 2:
+
+def _first_crossing_time(time_values, output_values, target_value):
+    time_values = np.asarray(time_values, dtype=float)
+    output_values = np.asarray(output_values, dtype=float)
+
+    if len(time_values) < 2:
         return None
 
-    if target >= y[0]:
-        idx = np.where(y >= target)[0]
+    if target_value >= output_values[0]:
+        crossing_indices = np.where(output_values >= target_value)[0]
     else:
-        idx = np.where(y <= target)[0]
+        crossing_indices = np.where(output_values <= target_value)[0]
 
-    if len(idx) == 0:
+    if len(crossing_indices) == 0:
         return None
 
-    i = int(idx[0])
-    if i <= 0:
-        return float(t[0])
+    crossing_index = int(crossing_indices[0])
+    if crossing_index <= 0:
+        return float(time_values[0])
 
-    t0, t1 = float(t[i - 1]), float(t[i])
-    y0, y1 = float(y[i - 1]), float(y[i])
+    t0, t1 = float(time_values[crossing_index - 1]), float(time_values[crossing_index])
+    y0, y1 = float(output_values[crossing_index - 1]), float(output_values[crossing_index])
 
     if np.isclose(y1, y0):
         return t1
 
-    alpha = (target - y0) / (y1 - y0)
-    alpha = float(np.clip(alpha, 0.0, 1.0))
-    return t0 + alpha * (t1 - t0)
+    interpolation_factor = (target_value - y0) / (y1 - y0)
+    interpolation_factor = float(np.clip(interpolation_factor, 0.0, 1.0))
+    return t0 + interpolation_factor * (t1 - t0)
 
 
-def _estimate_fixed_gain(y):
-    """Estimate fixed static gain K from tail of the step response."""
-    y = np.asarray(y, dtype=float)
+def _estimate_fixed_gain(output_values):
+    output_values = np.asarray(output_values, dtype=float)
 
-    if len(y) == 0:
-        raise ValueError("Prázdná odezva pro odhad zesílení.")
+    if len(output_values) == 0:
+        raise ValueError("Empty response for gain estimation.")
 
-    tail_n = max(6, len(y) // 10)
-    k_tail = float(np.median(y[-tail_n:]))
-    if np.isfinite(k_tail) and abs(k_tail) > 1e-10:
-        return k_tail
+    tail_size = max(6, len(output_values) // 10)
+    tail_gain = float(np.median(output_values[-tail_size:]))
+    if np.isfinite(tail_gain) and abs(tail_gain) > 1e-10:
+        return tail_gain
 
-    k_last = float(y[-1])
-    if np.isfinite(k_last) and abs(k_last) > 1e-10:
-        return k_last
+    last_gain = float(output_values[-1])
+    if np.isfinite(last_gain) and abs(last_gain) > 1e-10:
+        return last_gain
 
-    peak_idx = int(np.argmax(np.abs(y)))
-    k_peak = float(y[peak_idx])
-    if np.isfinite(k_peak) and abs(k_peak) > 1e-10:
-        return k_peak
+    peak_index = int(np.argmax(np.abs(output_values)))
+    peak_gain = float(output_values[peak_index])
+    if np.isfinite(peak_gain) and abs(peak_gain) > 1e-10:
+        return peak_gain
 
-    raise ValueError("Nelze odhadnout nenulové statické zesílení K.")
+    raise ValueError("Unable to estimate non-zero static gain K.")
 
 
-def _fraction_seeds(t, y, K_fixed):
+def _fraction_seeds(time_values, output_values, fixed_gain):
     """
     Generate initial (T, L) guesses using response-level crossings.
     For FOPDT: t_f = L - T*ln(1-f).
     """
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float)
+    time_values = np.asarray(time_values, dtype=float)
+    output_values = np.asarray(output_values, dtype=float)
 
-    if len(y) < 8:
+    if len(output_values) < 8:
         return []
-    if not np.isfinite(K_fixed) or abs(K_fixed) < 1e-12:
+    if not np.isfinite(fixed_gain) or abs(fixed_gain) < 1e-12:
         return []
 
-    frac_pairs = [
+    fraction_pairs = [
         (0.10, 0.63),
         (0.20, 0.80),
         (0.28, 0.63),
     ]
 
-    seeds = []
-    for f1, f2 in frac_pairs:
-        y1 = K_fixed * f1
-        y2 = K_fixed * f2
-        t1 = _first_crossing_time(t, y, y1)
-        t2 = _first_crossing_time(t, y, y2)
-        if t1 is None or t2 is None or not (t2 > t1):
+    seed_points = []
+    for first_fraction, second_fraction in fraction_pairs:
+        first_target = fixed_gain * first_fraction
+        second_target = fixed_gain * second_fraction
+
+        first_time = _first_crossing_time(time_values, output_values, first_target)
+        second_time = _first_crossing_time(time_values, output_values, second_target)
+        if first_time is None or second_time is None or not (second_time > first_time):
             continue
 
-        denom = np.log((1.0 - f1) / (1.0 - f2))
-        if np.isclose(denom, 0.0):
+        denominator = np.log((1.0 - first_fraction) / (1.0 - second_fraction))
+        if np.isclose(denominator, 0.0):
             continue
 
-        T_est = (t2 - t1) / denom
-        L_est = t1 + T_est * np.log(1.0 - f1)
+        time_constant_estimate = (second_time - first_time) / denominator
+        delay_estimate = first_time + time_constant_estimate * np.log(1.0 - first_fraction)
 
-        if np.isfinite(T_est) and T_est > 0 and np.isfinite(L_est):
-            seeds.append(np.array([T_est, max(0.0, L_est)], dtype=float))
+        if np.isfinite(time_constant_estimate) and time_constant_estimate > 0 and np.isfinite(delay_estimate):
+            seed_points.append(np.array([time_constant_estimate, max(0.0, delay_estimate)], dtype=float))
 
-    return seeds
+    return seed_points
 
 
-def _refine_t_only(t, y, K_fixed, L_fixed, h):
-    """Refine only T for fixed K and fixed L."""
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float)
+def _refine_t_only(time_values, output_values, fixed_gain, fixed_delay, sample_step):
+    time_values = np.asarray(time_values, dtype=float)
+    output_values = np.asarray(output_values, dtype=float)
 
-    t_end = max(float(t[-1]), h)
-    t_after_l = t[t > (L_fixed + h)]
+    end_time = max(float(time_values[-1]), sample_step)
+    time_after_delay = time_values[time_values > (fixed_delay + sample_step)]
 
-    starts = []
-    if len(t_after_l) > 0:
-        starts.append(max(h * 0.1, float(np.median(t_after_l - L_fixed))))
+    start_points = []
+    if len(time_after_delay) > 0:
+        start_points.append(max(sample_step * 0.1, float(np.median(time_after_delay - fixed_delay))))
 
-    t63 = _first_crossing_time(t, y, K_fixed * (1.0 - np.exp(-1.0)))
-    if t63 is not None:
-        starts.append(max(h * 0.1, float(t63 - L_fixed)))
+    time_at_63 = _first_crossing_time(time_values, output_values, fixed_gain * (1.0 - np.exp(-1.0)))
+    if time_at_63 is not None:
+        start_points.append(max(sample_step * 0.1, float(time_at_63 - fixed_delay)))
 
-    x_lin = t - L_fixed
-    z_lin = 1.0 - (y / K_fixed)
-    mask = (x_lin > h) & (z_lin > 1e-6) & (z_lin < 0.98)
-    if np.count_nonzero(mask) >= 4:
-        x_fit = x_lin[mask]
-        y_fit = np.log(z_lin[mask])
+    shifted_time = time_values - fixed_delay
+    normalized_output = 1.0 - (output_values / fixed_gain)
+    fit_mask = (shifted_time > sample_step) & (normalized_output > 1e-6) & (normalized_output < 0.98)
+
+    if np.count_nonzero(fit_mask) >= 4:
+        fit_x = shifted_time[fit_mask]
+        fit_y = np.log(normalized_output[fit_mask])
         try:
-            slope, _ = np.polyfit(x_fit, y_fit, 1)
+            slope, _ = np.polyfit(fit_x, fit_y, 1)
             if slope < 0:
-                starts.append(max(h * 0.1, float(-1.0 / slope)))
+                start_points.append(max(sample_step * 0.1, float(-1.0 / slope)))
         except Exception:
             pass
 
-    starts.extend([h * 0.5, t_end * 0.08, t_end * 0.2, t_end * 0.5, t_end * 1.2])
-    starts = [float(v) for v in starts if np.isfinite(v) and v > 0]
+    start_points.extend([sample_step * 0.5, end_time * 0.08, end_time * 0.2, end_time * 0.5, end_time * 1.2])
+    start_points = [float(value) for value in start_points if np.isfinite(value) and value > 0]
 
-    if not starts:
-        starts = [max(h * 0.1, t_end * 0.2)]
+    if not start_points:
+        start_points = [max(sample_step * 0.1, end_time * 0.2)]
 
-    lb = max(1e-9, h * 0.05)
-    ub = max(80.0 * t_end, h * 10.0)
+    lower_bound = max(1e-9, sample_step * 0.05)
+    upper_bound = max(80.0 * end_time, sample_step * 10.0)
 
-    best = None
+    best_candidate = None
 
-    def residuals(params):
-        T = float(params[0])
-        return _fopdt_step_response(t, K_fixed, T, L_fixed) - y
+    def residuals(parameters):
+        time_constant = float(parameters[0])
+        return _fopdt_step_response(time_values, fixed_gain, time_constant, fixed_delay) - output_values
 
-    seen = set()
-    for t0 in starts:
-        t0 = float(np.clip(t0, lb, ub))
-        key = round(t0, 10)
-        if key in seen:
+    tried_start_points = set()
+    for start_time_constant in start_points:
+        start_time_constant = float(np.clip(start_time_constant, lower_bound, upper_bound))
+        point_key = round(start_time_constant, 10)
+        if point_key in tried_start_points:
             continue
-        seen.add(key)
+        tried_start_points.add(point_key)
 
         try:
-            result = least_squares(
+            robust_result = least_squares(
                 residuals,
-                x0=np.array([t0], dtype=float),
-                bounds=(np.array([lb], dtype=float), np.array([ub], dtype=float)),
+                x0=np.array([start_time_constant], dtype=float),
+                bounds=(np.array([lower_bound], dtype=float), np.array([upper_bound], dtype=float)),
                 method="trf",
                 loss="soft_l1",
                 f_scale=0.08,
@@ -257,15 +271,16 @@ def _refine_t_only(t, y, K_fixed, L_fixed, h):
         except Exception:
             continue
 
-        if not result.success:
+        if not robust_result.success:
             continue
 
-        t_mid = float(result.x[0])
+        mid_time_constant = float(robust_result.x[0])
+
         try:
-            result_lin = least_squares(
+            mse_result = least_squares(
                 residuals,
-                x0=np.array([t_mid], dtype=float),
-                bounds=(np.array([lb], dtype=float), np.array([ub], dtype=float)),
+                x0=np.array([mid_time_constant], dtype=float),
+                bounds=(np.array([lower_bound], dtype=float), np.array([upper_bound], dtype=float)),
                 method="trf",
                 loss="linear",
                 max_nfev=15000,
@@ -273,82 +288,80 @@ def _refine_t_only(t, y, K_fixed, L_fixed, h):
                 ftol=1e-13,
                 gtol=1e-13,
             )
-            if result_lin.success:
-                t_opt = float(result_lin.x[0])
-            else:
-                t_opt = t_mid
+            optimized_time_constant = float(mse_result.x[0]) if mse_result.success else mid_time_constant
         except Exception:
-            t_opt = t_mid
+            optimized_time_constant = mid_time_constant
 
-        y_opt = _fopdt_step_response(t, K_fixed, t_opt, L_fixed)
-        mse_opt = float(np.mean((y - y_opt) ** 2))
+        optimized_output = _fopdt_step_response(time_values, fixed_gain, optimized_time_constant, fixed_delay)
+        mse_value = float(np.mean((output_values - optimized_output) ** 2))
 
-        candidate = (mse_opt, t_opt)
-        if best is None or candidate[0] < best[0]:
-            best = candidate
+        candidate = (mse_value, optimized_time_constant)
+        if best_candidate is None or candidate[0] < best_candidate[0]:
+            best_candidate = candidate
 
-    return best
+    return best_candidate
 
 
-def _ultra_refine_fopdt(t, y, K_fixed, T0, L0, h):
+def _ultra_refine_fopdt(time_values, output_values, fixed_gain, initial_time_constant, initial_delay, sample_step):
     """
-    Deep nonlinear refinement of T, L with fixed K.
-    This stage is intentionally slower, but usually more accurate.
+    Deep nonlinear refinement of T and L with fixed K.
     """
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float)
+    time_values = np.asarray(time_values, dtype=float)
+    output_values = np.asarray(output_values, dtype=float)
 
-    y_scale = max(float(np.max(np.abs(y))), 1.0)
-    t_end = max(float(t[-1]), h)
-    dy = np.gradient(y, t, edge_order=1)
-    dy_scale = max(float(np.max(np.abs(dy))), y_scale / max(t_end, h), 1e-6)
-    w_time = 0.45 + 0.55 * np.exp(-t / max(0.2 * t_end, h))
+    output_scale = max(float(np.max(np.abs(output_values))), 1.0)
+    end_time = max(float(time_values[-1]), sample_step)
 
-    lb = np.array([max(1e-9, h * 0.05), 0.0], dtype=float)
-    ub = np.array([max(80.0 * t_end, h * 10.0), max(2.0 * t_end, h)], dtype=float)
+    output_derivative = np.gradient(output_values, time_values, edge_order=1)
+    derivative_scale = max(float(np.max(np.abs(output_derivative))), output_scale / max(end_time, sample_step), 1e-6)
+    time_weights = 0.45 + 0.55 * np.exp(-time_values / max(0.2 * end_time, sample_step))
 
-    starts = []
-    seen = set()
+    lower_bounds = np.array([max(1e-9, sample_step * 0.05), 0.0], dtype=float)
+    upper_bounds = np.array([max(80.0 * end_time, sample_step * 10.0), max(2.0 * end_time, sample_step)], dtype=float)
 
-    def add_start(vec):
-        clipped = np.clip(np.asarray(vec, dtype=float), lb, ub)
-        key = tuple(round(float(v), 10) for v in clipped)
-        if key in seen:
+    start_points = []
+    seen_points = set()
+
+    def add_start(candidate_vector):
+        clipped_vector = np.clip(np.asarray(candidate_vector, dtype=float), lower_bounds, upper_bounds)
+        point_key = tuple(round(float(value), 10) for value in clipped_vector)
+        if point_key in seen_points:
             return
-        seen.add(key)
-        starts.append(clipped)
+        seen_points.add(point_key)
+        start_points.append(clipped_vector)
 
-    add_start([T0, L0])
-    add_start([T0 * 0.8, L0])
-    add_start([T0 * 1.2, L0])
-    add_start([T0 * 0.6, max(0.0, L0 - h)])
-    add_start([T0 * 1.6, L0 + h])
-    add_start([T0 * 0.45, max(0.0, L0 - 3.0 * h)])
-    add_start([T0 * 2.1, L0 + 3.0 * h])
+    add_start([initial_time_constant, initial_delay])
+    add_start([initial_time_constant * 0.8, initial_delay])
+    add_start([initial_time_constant * 1.2, initial_delay])
+    add_start([initial_time_constant * 0.6, max(0.0, initial_delay - sample_step)])
+    add_start([initial_time_constant * 1.6, initial_delay + sample_step])
+    add_start([initial_time_constant * 0.45, max(0.0, initial_delay - 3.0 * sample_step)])
+    add_start([initial_time_constant * 2.1, initial_delay + 3.0 * sample_step])
 
-    for seed in _fraction_seeds(t, y, K_fixed):
+    for seed in _fraction_seeds(time_values, output_values, fixed_gain):
         add_start(seed)
 
-    best = None
+    best_candidate = None
 
-    def residuals_focus(params):
-        T, L = params
-        y_model = _fopdt_step_response(t, K_fixed, T, L)
-        dy_model = np.gradient(y_model, t, edge_order=1)
-        r_y = (y_model - y) / y_scale
-        r_d = (dy_model - dy) / dy_scale
-        return np.concatenate((w_time * r_y, 0.35 * w_time * r_d))
+    def focused_residuals(parameters):
+        time_constant, delay_time = parameters
+        model_output = _fopdt_step_response(time_values, fixed_gain, time_constant, delay_time)
+        model_derivative = np.gradient(model_output, time_values, edge_order=1)
 
-    def residuals_mse(params):
-        T, L = params
-        return _fopdt_step_response(t, K_fixed, T, L) - y
+        output_residual = (model_output - output_values) / output_scale
+        derivative_residual = (model_derivative - output_derivative) / derivative_scale
+        return np.concatenate((time_weights * output_residual, 0.35 * time_weights * derivative_residual))
 
-    for x0 in starts:
+    def mse_residuals(parameters):
+        time_constant, delay_time = parameters
+        return _fopdt_step_response(time_values, fixed_gain, time_constant, delay_time) - output_values
+
+    for start_vector in start_points:
         try:
-            result_focus = least_squares(
-                residuals_focus,
-                x0,
-                bounds=(lb, ub),
+            focused_result = least_squares(
+                focused_residuals,
+                start_vector,
+                bounds=(lower_bounds, upper_bounds),
                 method="trf",
                 loss="soft_l1",
                 f_scale=0.08,
@@ -360,16 +373,16 @@ def _ultra_refine_fopdt(t, y, K_fixed, T0, L0, h):
         except Exception:
             continue
 
-        if not result_focus.success:
+        if not focused_result.success:
             continue
 
-        x_mid = np.clip(np.asarray(result_focus.x, dtype=float), lb, ub)
+        mid_vector = np.clip(np.asarray(focused_result.x, dtype=float), lower_bounds, upper_bounds)
 
         try:
-            result_mse = least_squares(
-                residuals_mse,
-                x_mid,
-                bounds=(lb, ub),
+            mse_result = least_squares(
+                mse_residuals,
+                mid_vector,
+                bounds=(lower_bounds, upper_bounds),
                 method="trf",
                 loss="linear",
                 max_nfev=25000,
@@ -377,131 +390,143 @@ def _ultra_refine_fopdt(t, y, K_fixed, T0, L0, h):
                 ftol=1e-13,
                 gtol=1e-13,
             )
-            if result_mse.success:
-                x_final = np.asarray(result_mse.x, dtype=float)
-            else:
-                x_final = x_mid
+            final_vector = np.asarray(mse_result.x, dtype=float) if mse_result.success else mid_vector
         except Exception:
-            x_final = x_mid
+            final_vector = mid_vector
 
-        T_opt, L_opt = map(float, x_final)
-        if not (np.isfinite(T_opt) and np.isfinite(L_opt)):
+        optimized_time_constant, optimized_delay = map(float, final_vector)
+        if not (np.isfinite(optimized_time_constant) and np.isfinite(optimized_delay)):
             continue
 
-        y_opt = _fopdt_step_response(t, K_fixed, T_opt, L_opt)
-        mse_opt = float(np.mean((y - y_opt) ** 2))
+        optimized_output = _fopdt_step_response(time_values, fixed_gain, optimized_time_constant, optimized_delay)
+        mse_value = float(np.mean((output_values - optimized_output) ** 2))
 
-        candidate = (mse_opt, T_opt, L_opt)
-        if best is None or candidate[0] < best[0]:
-            best = candidate
+        candidate = (mse_value, optimized_time_constant, optimized_delay)
+        if best_candidate is None or candidate[0] < best_candidate[0]:
+            best_candidate = candidate
 
-    return best
+    return best_candidate
 
 
 def apro_FOPDT(system, downsample=1, max_delay_samples=300, fixed_k=None, fixed_l=None):
     downsample = int(downsample)
     if downsample < 1:
-        raise ValueError("Parametr downsample musí být >= 1.")
+        raise ValueError("Parameter downsample must be >= 1.")
 
     delay_key = None if max_delay_samples is None else int(max_delay_samples)
-    fixed_k_key = None if fixed_k is None else round(float(fixed_k), 12)
-    fixed_l_key = None if fixed_l is None else round(float(fixed_l), 12)
-    cache_key = (_FOPDT_ULTRA_VERSION, _system_signature(system), downsample, delay_key, fixed_k_key, fixed_l_key)
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
+    fixed_gain_key = None if fixed_k is None else round(float(fixed_k), 12)
+    fixed_delay_key = None if fixed_l is None else round(float(fixed_l), 12)
 
-    t, y = step_response(system)
+    cache_key = (
+        FOPDT_ULTRA_VERSION,
+        _system_signature(system),
+        downsample,
+        delay_key,
+        fixed_gain_key,
+        fixed_delay_key,
+    )
 
-    t = np.asarray(t, dtype=float)
-    y = np.asarray(y, dtype=float)
+    cached_result = _cache_get(cache_key)
+    if cached_result is not None:
+        return cached_result
+
+    time_values, output_values = step_response(system)
+    time_values = np.asarray(time_values, dtype=float)
+    output_values = np.asarray(output_values, dtype=float)
 
     if downsample > 1:
-        t = t[::downsample]
-        y = y[::downsample]
+        time_values = time_values[::downsample]
+        output_values = output_values[::downsample]
 
-    if len(t) < 6:
-        raise ValueError("Nedostatek bodů odezvy pro identifikaci FOPDT.")
+    if len(time_values) < 6:
+        raise ValueError("Not enough response samples for FOPDT identification.")
 
-    dt = np.diff(t)
-    positive_dt = dt[dt > 0]
+    sample_intervals = np.diff(time_values)
+    positive_intervals = sample_intervals[sample_intervals > 0]
 
-    if len(positive_dt) == 0:
-        raise ValueError("Nelze určit krok diskretizace z časové osy odezvy.")
+    if len(positive_intervals) == 0:
+        raise ValueError("Unable to determine discretization step from response timeline.")
 
-    h = float(np.median(positive_dt))
+    sample_step = float(np.median(positive_intervals))
+
     if fixed_k is None:
-        K_fixed = _estimate_fixed_gain(y)
+        fixed_gain = _estimate_fixed_gain(output_values)
     else:
-        K_fixed = float(fixed_k)
-        if not np.isfinite(K_fixed) or abs(K_fixed) < 1e-12:
-            raise ValueError("fixed_k musí být konečné a nenulové číslo.")
+        fixed_gain = float(fixed_k)
+        if not np.isfinite(fixed_gain) or abs(fixed_gain) < 1e-12:
+            raise ValueError("fixed_k must be finite and non-zero.")
 
     if fixed_l is not None:
-        L_fixed = float(fixed_l)
-        if not np.isfinite(L_fixed) or L_fixed < 0:
-            raise ValueError("fixed_l musí být konečné číslo a >= 0.")
+        fixed_delay = float(fixed_l)
+        if not np.isfinite(fixed_delay) or fixed_delay < 0:
+            raise ValueError("fixed_l must be finite and >= 0.")
 
-        best_t = _refine_t_only(t, y, K_fixed, L_fixed, h)
-        if best_t is None:
-            raise ValueError("Identifikace FOPDT pro fixní L nekonvergovala.")
+        refined_time_result = _refine_t_only(time_values, output_values, fixed_gain, fixed_delay, sample_step)
+        if refined_time_result is None:
+            raise ValueError("FOPDT identification did not converge for fixed L.")
 
-        _, T = best_t
-        result = (float(K_fixed), float(T), float(L_fixed))
+        _, optimized_time_constant = refined_time_result
+        result = (float(fixed_gain), float(optimized_time_constant), float(fixed_delay))
         _cache_set(cache_key, result)
         return result
 
-    u = np.ones_like(y)
+    input_values = np.ones_like(output_values)
     if max_delay_samples is None:
-        max_delay_samples = len(y) // 3
+        max_delay_samples = len(output_values) // 3
 
-    max_n = max(1, min(int(max_delay_samples), int(t[-1] / h)))
+    max_delay = max(1, min(int(max_delay_samples), int(time_values[-1] / sample_step)))
+    best_coarse_candidate = None
 
-    best = None
-
-    for n in range(max_n + 1):
-        theta, _ = _run_rls(y, u, n)
-        if theta is None:
+    for delay_samples in range(max_delay + 1):
+        arx_params, _ = _run_rls(output_values, input_values, delay_samples)
+        if arx_params is None:
             continue
 
-        a1, b1, b2 = float(theta[0]), float(theta[1]), float(theta[2])
+        a1, b1, b2 = map(float, arx_params)
 
         if -a1 <= 0 or np.isclose(1.0 + a1, 0.0):
             continue
 
-        T = -h / np.log(-a1)
-        if not np.isfinite(T) or T <= 0:
+        time_constant = -sample_step / np.log(-a1)
+        if not np.isfinite(time_constant) or time_constant <= 0:
             continue
 
-        denom = b1 + b2
-        frac = (b2 / denom) if not np.isclose(denom, 0.0) else 0.0
+        denominator = b1 + b2
+        fractional_delay = (b2 / denominator) if not np.isclose(denominator, 0.0) else 0.0
 
-        L = (n + frac) * h
-        if not np.isfinite(L) or L < 0:
+        delay_time = (delay_samples + fractional_delay) * sample_step
+        if not np.isfinite(delay_time) or delay_time < 0:
             continue
 
-        y_model = _fopdt_step_response(t, K_fixed, T, L)
-        mse_model = float(np.mean((y - y_model) ** 2))
-        candidate = (mse_model, T, L)
-        if best is None or candidate[0] < best[0]:
-            best = candidate
+        coarse_output = _fopdt_step_response(time_values, fixed_gain, time_constant, delay_time)
+        coarse_mse = float(np.mean((output_values - coarse_output) ** 2))
 
-    if best is None:
-        raise ValueError("Identifikace FOPDT nekonvergovala.")
+        candidate = (coarse_mse, time_constant, delay_time)
+        if best_coarse_candidate is None or candidate[0] < best_coarse_candidate[0]:
+            best_coarse_candidate = candidate
 
-    mse_coarse, T, L = best
+    if best_coarse_candidate is None:
+        raise ValueError("FOPDT identification did not converge.")
 
-    # Ultra mode by default: refine only T, L while keeping K fixed.
-    refined = _ultra_refine_fopdt(t, y, K_fixed, T, L, h)
-    if refined is not None:
-        mse_ref, T_ref, L_ref = refined
-        if mse_ref <= mse_coarse:
-            T, L = T_ref, L_ref
+    coarse_mse, coarse_time_constant, coarse_delay = best_coarse_candidate
 
-    # Delays smaller than half of one identified sampling step are treated as zero.
-    if L < (_L_ZERO_THRESHOLD_SAMPLES * h):
-        L = 0.0
+    refined_candidate = _ultra_refine_fopdt(
+        time_values,
+        output_values,
+        fixed_gain,
+        coarse_time_constant,
+        coarse_delay,
+        sample_step,
+    )
 
-    result = (float(K_fixed), float(T), float(L))
+    if refined_candidate is not None:
+        refined_mse, refined_time_constant, refined_delay = refined_candidate
+        if refined_mse <= coarse_mse:
+            coarse_time_constant, coarse_delay = refined_time_constant, refined_delay
+
+    if coarse_delay < (L_ZERO_THRESHOLD_SAMPLES * sample_step):
+        coarse_delay = 0.0
+
+    result = (float(fixed_gain), float(coarse_time_constant), float(coarse_delay))
     _cache_set(cache_key, result)
     return result

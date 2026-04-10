@@ -1,135 +1,151 @@
-import pandas as pd
 import tkinter as tk
 from tkinter import filedialog
+
 import numpy as np
+import pandas as pd
 from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 
-def first_order_model(t, K, T):
-    return K * (1 - np.exp(-t / T))
 
-def integrator_model(t, K):
-    return K * t
+def first_order_model(time_values, gain, time_constant):
+    return gain * (1 - np.exp(-time_values / time_constant))
 
-def logistic_model(t, K, a, b):
-    return K / (1 + np.exp(-a * (t - b)))
 
-def double_exponential(t, K, A, B, T1, T2):
-    return K + A * np.exp(-t / T1) + B * np.exp(-t / T2)
+def integrator_model(time_values, gain):
+    return gain * time_values
 
-def fit_models(x, y):
-    models = [
+
+def logistic_model(time_values, gain, slope, midpoint):
+    return gain / (1 + np.exp(-slope * (time_values - midpoint)))
+
+
+def double_exponential_model(time_values, offset, amp_a, amp_b, tau_a, tau_b):
+    return offset + amp_a * np.exp(-time_values / tau_a) + amp_b * np.exp(-time_values / tau_b)
+
+
+def fit_models(time_values, output_values):
+    model_candidates = [
         {
-            "name": "Первый порядок",
+            "name": "First-order",
             "func": first_order_model,
-            "initial": [max(y), 1.0]
+            "initial": [max(output_values), 1.0],
         },
         {
-            "name": "Интегратор",
+            "name": "Integrator",
             "func": integrator_model,
-            "initial": [y[-1] / x[-1]]
+            "initial": [output_values[-1] / time_values[-1]],
         },
         {
-            "name": "Логистическая",
+            "name": "Logistic",
             "func": logistic_model,
-            "initial": [max(y), 1.0, x[len(x)//2]]
+            "initial": [max(output_values), 1.0, time_values[len(time_values) // 2]],
         },
         {
-            "name": "Сумма экспонент",
-            "func": double_exponential,
-            "initial": [max(y), max(y)/2, max(y)/2, 1.0, 0.5]
-        }
+            "name": "Double exponential",
+            "func": double_exponential_model,
+            "initial": [max(output_values), max(output_values) / 2, max(output_values) / 2, 1.0, 0.5],
+        },
     ]
 
     best_result = None
 
-    for model in models:
+    for model in model_candidates:
         try:
-            popt, _ = curve_fit(model["func"], x, y, p0=model["initial"], maxfev=10000)
-            y_pred = model["func"](x, *popt)
-            mse = mean_squared_error(y, y_pred)
+            optimal_params, _ = curve_fit(
+                model["func"],
+                time_values,
+                output_values,
+                p0=model["initial"],
+                maxfev=10000,
+            )
+            predicted_output = model["func"](time_values, *optimal_params)
+            mse_value = mean_squared_error(output_values, predicted_output)
 
-            if best_result is None or mse < best_result["mse"]:
+            if best_result is None or mse_value < best_result["mse"]:
                 best_result = {
                     "name": model["name"],
                     "func": model["func"],
-                    "params": popt,
-                    "mse": mse
+                    "params": optimal_params,
+                    "mse": mse_value,
                 }
 
-        except Exception as e:
-            print(f"Chyba modelu {model['name']}: {e}")
+        except Exception as exc:
+            print(f"Model fit failed for {model['name']}: {exc}")
 
     return best_result
 
+
 def read_excel_to_arrays(file_path):
     try:
-        df = pd.read_excel(file_path, header=None)
+        data_frame = pd.read_excel(file_path, header=None)
 
-        if df.shape[1] < 2:
-            raise ValueError("V souboru musi byt alespon dva sloupce.")
+        if data_frame.shape[1] < 2:
+            raise ValueError("Excel file must contain at least two columns.")
 
-        x = df.iloc[:, 0].to_numpy()
-        y = df.iloc[:, 1].to_numpy()
+        time_values = data_frame.iloc[:, 0].to_numpy()
+        output_values = data_frame.iloc[:, 1].to_numpy()
 
-        x_norm = x - x[0]
-        y_norm = y - y[0]
+        normalized_time = time_values - time_values[0]
+        normalized_output = output_values - output_values[0]
 
-        return x_norm, y_norm
+        return normalized_time, normalized_output
 
-    except Exception as e:
-        print(f"Chyba pri cteni Excel souboru: {e}")
+    except Exception as exc:
+        print(f"Failed to read Excel file: {exc}")
         return None, None
+
 
 def choose_file():
     root = tk.Tk()
     root.withdraw()
-    file_path = filedialog.askopenfilename(
-        title="Выберите Excel-файл",
-        filetypes=[("Excel files", "*.xlsx *.xls")]
+    return filedialog.askopenfilename(
+        title="Select Excel file",
+        filetypes=[("Excel files", "*.xlsx *.xls")],
     )
-    return file_path
+
 
 if __name__ == "__main__":
-    file_path = choose_file()
+    selected_file = choose_file()
 
-    if not file_path:
-        print("Файл не выбран.")
+    if not selected_file:
+        print("No file selected.")
     else:
-        x, y = read_excel_to_arrays(file_path)
-        if x is not None and y is not None:
-            result = fit_models(x, y)
+        time_values, output_values = read_excel_to_arrays(selected_file)
+        if time_values is not None and output_values is not None:
+            fit_result = fit_models(time_values, output_values)
 
-            if result:
-                print(f"\nЛучшая модель: {result['name']}")
-                print(f"Параметры: {result['params']}")
-                print(f"Среднеквадратичная ошибка: {result['mse']:.6f}")
+            if fit_result:
+                print(f"\nBest model: {fit_result['name']}")
+                print(f"Parameters: {fit_result['params']}")
+                print(f"Mean squared error: {fit_result['mse']:.6f}")
 
-                if result['name'] == "Первый порядок":
-                    K, T = result["params"]
-                    print(f"\nФормула: y(t) = {K:.3f} * (1 - exp(-t / {T:.3f}))")
-                    print(f"Параметры модели:\n  K = {K:.3f}\n  Временная константа T = {T:.3f} с")
+                if fit_result["name"] == "First-order":
+                    gain, time_constant = fit_result["params"]
+                    print(f"\nFormula: y(t) = {gain:.3f} * (1 - exp(-t / {time_constant:.3f}))")
+                    print(f"Gain K = {gain:.3f}")
+                    print(f"Time constant T = {time_constant:.3f} s")
 
-                elif result['name'] == "Интегратор":
-                    K, = result["params"]
-                    print(f"\nФормула: y(t) = {K:.3f} * t")
-                    print(f"Параметр модели:\n  K = {K:.3f} (коэффициент усиления интегратора)")
+                elif fit_result["name"] == "Integrator":
+                    (gain,) = fit_result["params"]
+                    print(f"\nFormula: y(t) = {gain:.3f} * t")
+                    print(f"Gain K = {gain:.3f}")
 
-                elif result['name'] == "Логистическая":
-                    K, a, b = result["params"]
-                    print(f"\nФормула: y(t) = {K:.3f} / (1 + exp(-{a:.3f} * (t - {b:.3f})))")
-                    print(f"Параметры модели:\n  K = {K:.3f}\n  a = {a:.3f} (скорость роста)\n  b = {b:.3f} (сдвиг по времени)")
+                elif fit_result["name"] == "Logistic":
+                    gain, slope, midpoint = fit_result["params"]
+                    print(f"\nFormula: y(t) = {gain:.3f} / (1 + exp(-{slope:.3f} * (t - {midpoint:.3f})))")
+                    print(f"Gain K = {gain:.3f}")
+                    print(f"Slope a = {slope:.3f}")
+                    print(f"Midpoint b = {midpoint:.3f}")
 
-                elif result['name'] == "Сумма экспонент":
-                    K, A, B, T1, T2 = result["params"]
-                    print(f"\nФормула: y(t) = {K:.3f} + {A:.3f} * exp(-t / {T1:.3f}) + {B:.3f} * exp(-t / {T2:.3f})")
-                    print(f"Параметры модели:")
-                    print(f"  K (постоянная составляющая) = {K:.3f}")
-                    print(f"  A = {A:.3f}")
-                    print(f"  B = {B:.3f}")
-                    print(f"  Временная константа T1 = {T1:.3f} с")
-                    print(f"  Временная константа T2 = {T2:.3f} с")
-
+                elif fit_result["name"] == "Double exponential":
+                    offset, amp_a, amp_b, tau_a, tau_b = fit_result["params"]
+                    print(
+                        f"\nFormula: y(t) = {offset:.3f} + {amp_a:.3f} * exp(-t / {tau_a:.3f}) + {amp_b:.3f} * exp(-t / {tau_b:.3f})"
+                    )
+                    print(f"Offset = {offset:.3f}")
+                    print(f"A = {amp_a:.3f}")
+                    print(f"B = {amp_b:.3f}")
+                    print(f"T1 = {tau_a:.3f} s")
+                    print(f"T2 = {tau_b:.3f} s")
             else:
-                print("Не удалось подобрать ни одну модель.")
-
+                print("No model could be fitted.")

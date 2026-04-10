@@ -4,25 +4,45 @@ import numpy as np
 from scipy.signal import cont2discrete, tf2ss
 
 
-def _to_tuple(values):
-    arr = np.asarray(values, dtype=float).reshape(-1)
-    return tuple(float(v) for v in arr)
+def _as_float_tuple(values):
+    values_array = np.asarray(values, dtype=float).reshape(-1)
+    return tuple(float(value) for value in values_array)
 
 
 @lru_cache(maxsize=256)
-def _discretize_cached(num_tuple, den_tuple, dt):
-    num = np.asarray(num_tuple, dtype=float)
-    den = np.asarray(den_tuple, dtype=float)
-    A, B, C, D = tf2ss(num, den)
-    A_d, B_d, C_d, D_d, _ = cont2discrete((A, B, C, D), dt)
+def _discretize_cached(numerator_tuple, denominator_tuple, sample_time):
+    numerator_coeffs = np.asarray(numerator_tuple, dtype=float)
+    denominator_coeffs = np.asarray(denominator_tuple, dtype=float)
 
-    B_vec = np.asarray(B_d, dtype=float).reshape(-1)
-    C_vec = np.asarray(C_d, dtype=float).reshape(-1)
-    D_scalar = float(np.asarray(D_d, dtype=float).reshape(-1)[0])
+    state_matrix, input_matrix, output_matrix, feedthrough_matrix = tf2ss(
+        numerator_coeffs,
+        denominator_coeffs,
+    )
 
-    return A_d, B_vec, C_vec, D_scalar
+    (
+        discrete_state_matrix,
+        discrete_input_matrix,
+        discrete_output_matrix,
+        discrete_feedthrough_matrix,
+        _,
+    ) = cont2discrete((state_matrix, input_matrix, output_matrix, feedthrough_matrix), sample_time)
+
+    input_vector = np.asarray(discrete_input_matrix, dtype=float).reshape(-1)
+    output_vector = np.asarray(discrete_output_matrix, dtype=float).reshape(-1)
+    feedthrough_scalar = float(np.asarray(discrete_feedthrough_matrix, dtype=float).reshape(-1)[0])
+
+    return discrete_state_matrix, input_vector, output_vector, feedthrough_scalar
 
 
 def get_discrete_state_space(num, den, dt):
-    A_d, B_vec, C_vec, D_scalar = _discretize_cached(_to_tuple(num), _to_tuple(den), float(dt))
-    return A_d.copy(), B_vec.copy(), C_vec.copy(), D_scalar
+    discrete_state_matrix, input_vector, output_vector, feedthrough_scalar = _discretize_cached(
+        _as_float_tuple(num),
+        _as_float_tuple(den),
+        float(dt),
+    )
+    return (
+        discrete_state_matrix.copy(),
+        input_vector.copy(),
+        output_vector.copy(),
+        feedthrough_scalar,
+    )

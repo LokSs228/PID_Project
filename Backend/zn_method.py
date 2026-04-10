@@ -1,24 +1,26 @@
 # zn_method.py
-def zn_method(K, T, L):
-    if K == 0 or T <= 0 or L <= 0:
+
+def zn_method(process_gain, time_constant, delay_time):
+    if process_gain == 0 or time_constant <= 0 or delay_time <= 0:
         return None
 
-    Kp_P = T / (K * L)
+    p_kp = time_constant / (process_gain * delay_time)
 
-    Kp_PI = 0.9 * T / (K * L)
-    Ki_PI = Kp_PI / (3 * L)
+    pi_kp = 0.9 * time_constant / (process_gain * delay_time)
+    pi_ki = pi_kp / (3 * delay_time)
 
-    Kp_PID = 1.2 * T / (K * L)
-    Ki_PID = Kp_PID / (2 * L)
-    Kd_PID = Kp_PID * (0.5 * L)
+    pid_kp = 1.2 * time_constant / (process_gain * delay_time)
+    pid_ki = pid_kp / (2 * delay_time)
+    pid_kd = pid_kp * (0.5 * delay_time)
 
-    Kp_PD = Kp_PID
-    Kd_PD = Kp_PD * (0.5 * L)
-    pid_coeffs ={
-        'P':   {'Kp': Kp_P,  'Ki': None,   'Kd': None},
-        'PI':  {'Kp': Kp_PI, 'Ki': Ki_PI,  'Kd': None},
-        'PD':  {'Kp': Kp_PD, 'Ki': None,   'Kd': Kd_PD},
-        'PID': {'Kp': Kp_PID,'Ki': Ki_PID, 'Kd': Kd_PID},
+    pd_kp = pid_kp
+    pd_kd = pd_kp * (0.5 * delay_time)
+
+    pid_coeffs = {
+        "P": {"Kp": p_kp, "Ki": None, "Kd": None},
+        "PI": {"Kp": pi_kp, "Ki": pi_ki, "Kd": None},
+        "PD": {"Kp": pd_kp, "Ki": None, "Kd": pd_kd},
+        "PID": {"Kp": pid_kp, "Ki": pid_ki, "Kd": pid_kd},
     }
 
-    return  pid_coeffs, Kp_P, Kp_PI, Kp_PID, Ki_PI, Ki_PID, Kd_PID, Kp_PD, Kd_PD
+    return pid_coeffs, p_kp, pi_kp, pid_kp, pi_ki, pid_ki, pid_kd, pd_kp, pd_kd
