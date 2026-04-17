@@ -322,7 +322,7 @@ def calculate():
         except Exception as exc:
             return jsonify({"error": f"FOPDT approximation failed: {str(exc)}"}), 500
 
-    if tuning_method in ("ZN", "CHR_0", "CHR_0_POZ_H", "CHR_20", "CHR_20_POZ_H", "CHR_0_POT_P", "CHR_20_POT_P"):
+    if tuning_method in ("ZN", "CHR_0_POZ_H", "CHR_20_POZ_H", "CHR_0_POT_P", "CHR_20_POT_P"):
         if fopdt_delay is None or float(fopdt_delay) <= 0:
             return jsonify({"error": "Ziegler-Nichols and CHR methods require transport delay (L > 0)."}), 400
 
@@ -332,13 +332,13 @@ def calculate():
             fopdt_time_constant,
             fopdt_delay,
         )
-    elif tuning_method in ("CHR_0", "CHR_0_POZ_H"):
+    elif tuning_method == "CHR_0_POZ_H":
         pid_coeffs, p_kp, pi_kp, pid_kp, pi_ki, pid_ki, pid_kd, pd_kp, pd_kd = CHR_0_POZ_H(
             fopdt_gain,
             fopdt_time_constant,
             fopdt_delay,
         )
-    elif tuning_method in ("CHR_20", "CHR_20_POZ_H"):
+    elif tuning_method == "CHR_20_POZ_H":
         pid_coeffs, p_kp, pi_kp, pid_kp, pi_ki, pid_ki, pid_kd, pd_kp, pd_kd = CHR_20_POZ_H(
             fopdt_gain,
             fopdt_time_constant,
