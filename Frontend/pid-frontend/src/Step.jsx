@@ -30,7 +30,7 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
   const data = {
     datasets: [
       {
-        label: isEn ? 'Measured response y(t)' : 'Realna odezva y(t)',
+        label: isEn ? 'Measured response y(t)' : 'Reálná odezva y(t)',
         data: pointArray.map((p) => ({ x: p.t, y: p.y })),
         borderColor: '#38bdf8',
         backgroundColor: 'rgba(56, 189, 248, 0.12)',
@@ -40,7 +40,7 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
         borderWidth: 2.5,
       },
       aproArray.length > 0 && {
-        label: isEn ? 'FOPDT approximation' : 'Aproximovana FOPDT odezva',
+        label: isEn ? 'FOPDT approximation' : 'Aproximovaná FOPDT odezva',
         data: aproArray.map((p) => ({ x: p.t, y: p.y })),
         borderColor: '#f59e0b',
         backgroundColor: 'transparent',
@@ -85,7 +85,7 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
         type: 'linear',
         title: {
           display: true,
-          text: isEn ? 'Time [s]' : 'Cas [s]',
+          text: isEn ? 'Time [s]' : 'Čas [s]',
           color: isDark ? '#94a3b8' : '#475569',
           font: { size: 11, weight: '600' },
         },
@@ -112,7 +112,7 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
           <div
             className={`mb-2 text-[10px] font-bold uppercase tracking-[0.14em] ${isDark ? 'text-amber-300' : 'text-amber-700'}`}
           >
-            {isEn ? 'Approximated FOPDT model' : 'Aproximovany FOPDT model'}
+            {isEn ? 'Approximated FOPDT model' : 'Aproximovaný FOPDT model'}
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div

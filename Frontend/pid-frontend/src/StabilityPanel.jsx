@@ -42,7 +42,7 @@ function StabilityPanel({ stability, theme, lang = 'cz' }) {
       >
         <div>
           <h3 className={`text-xs font-semibold uppercase tracking-[0.12em] ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-            {isEn ? 'Closed-loop stability' : 'Stabilita uzavreneho regulacniho obvodu'}
+            {isEn ? 'Closed-loop stability' : 'Stabilita uzavřeného regulačního obvodu'}
           </h3>
           {dt != null && (
             <p className={`mt-1 text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
@@ -51,7 +51,7 @@ function StabilityPanel({ stability, theme, lang = 'cz' }) {
               {t7Echo != null && (
                 <>
                   {' '}
-                  {isEn ? '- current' : '- aktualne'}{' '}
+                  {isEn ? '- current' : '- aktuálně'}{' '}
                   <span className="font-mono">
                     t7 = {Number(t7Echo).toFixed(3)} s -&gt; T = {Number(dt).toFixed(6)} s
                   </span>
@@ -64,10 +64,10 @@ function StabilityPanel({ stability, theme, lang = 'cz' }) {
           {stable
             ? isEn
               ? 'System is stable'
-              : 'System je stabilni'
+              : 'Systém je stabilní'
             : isEn
               ? 'System is unstable'
-              : 'System je nestabilni'}
+              : 'Systém je nestabilní'}
         </span>
       </div>
 
@@ -80,7 +80,7 @@ function StabilityPanel({ stability, theme, lang = 'cz' }) {
           >
             {isEn
               ? 'The discrete linear model predicts stability, but the time simulation shows a non-settling or diverging response (actuator limits, shape of w(t)).'
-              : 'Diskretni linearni model predpovida stabilitu, ale casova simulace ukazuje neustaleny nebo divergentni vystup (omezeni akcni veliciny, tvar w(t)).'}
+              : 'Diskrétní lineární model předpovídá stabilitu, ale časová simulace ukazuje neustálený nebo divergentní výstup (omezení akční veličiny, tvar w(t)).'}
           </p>
         )}
 
@@ -88,7 +88,7 @@ function StabilityPanel({ stability, theme, lang = 'cz' }) {
           <div className={sectionTitle}>
             {isEn
               ? 'Discrete closed-loop control system - poles in z-plane'
-              : 'Diskretni uzavreny regulacni obvod - poly v rovine z'}
+              : 'Diskrétní uzavřený regulační obvod - póly v rovině z'}
           </div>
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-xl border border-slate-500/10">
@@ -117,7 +117,7 @@ function StabilityPanel({ stability, theme, lang = 'cz' }) {
           <div className={sectionTitle}>
             {isEn
               ? 'Continuous closed-loop control system - poles in s-plane'
-              : 'Spojity uzavreny regulacni obvod - poly v rovine s'}
+              : 'Spojitý uzavřený regulační obvod - póly v rovině s'}
           </div>
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-xl border border-slate-500/10">

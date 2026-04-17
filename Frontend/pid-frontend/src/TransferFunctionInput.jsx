@@ -41,49 +41,49 @@ function TransferFunctionInput({
   const [y0, setY0] = React.useState(70);
 
   const t = {
-    transferParams: isEn ? 'Transfer function parameters' : 'Parametry prenosu',
-    transferAria: isEn ? 'Transfer input information' : 'Informace o zadani prenosu',
-    transferInfoTitle: isEn ? 'Transfer function G(s) input' : 'Zadani prenosu G(s)',
-    tfInfoLine1: isEn ? 'The transfer function is entered via' : 'Prenosova funkce se zadava pres',
-    tfTimeConstWord: isEn ? 'time constants' : 'casove konstanty',
+    transferParams: isEn ? 'Transfer function parameters' : 'Parametry přenosu',
+    transferAria: isEn ? 'Transfer input information' : 'Informace o zadání přenosu',
+    transferInfoTitle: isEn ? 'Transfer function G(s) input' : 'Zadání přenosu G(s)',
+    tfInfoLine1: isEn ? 'The transfer function is entered via' : 'Přenosová funkce se zadává přes',
+    tfTimeConstWord: isEn ? 'time constants' : 'časové konstanty',
     tfInfoLine1Tail: isEn
       ? 'in numerator and denominator terms of the form'
-      : 'v citateli a jmenovateli ve tvaru',
+      : 'v čitateli a jmenovateli ve tvaru',
     tfInfoLine2: isEn
       ? 'Optional terms: differentiator (s^m) multiplies the numerator, integrator (s^r) multiplies the denominator.'
-      : 'Volitelne cleny: diferenciator (s^m) nasobi citatel, integrator (s^r) nasobi jmenovatel.',
+      : 'Volitelné členy: diferenciátor (s^m) násobí čitatel, integrátor (s^r) násobí jmenovatel.',
     tfInfoLine3: isEn
       ? 'Supported complex values are in the form'
-      : 'Podporovane jsou komplexni hodnoty ve tvaru',
+      : 'Podporované jsou komplexní hodnoty ve tvaru',
     tfInfoLine3b: isEn ? 'or' : 'nebo',
     tfInfoLine4: isEn
       ? 'When using complex terms, also enter conjugate pairs so the resulting polynomial remains real.'
-      : 'Pri pouziti komplexnich clenu zadavej i sdruzene dvojice, aby vysledny polynom byl realny.',
-    tfInfoLine4b: isEn ? 'Example:' : 'Priklad:',
-    staticGain: isEn ? 'Static gain (K)' : 'Staticke zesileni (K)',
-    delay: isEn ? 'Transport delay (L)' : 'Dopravni zpozdeni (L)',
-    numeratorTau: isEn ? 'Time constants for numerator (Tn)' : 'Casove konstanty pro citatel (Tn)',
-    denominatorTau: isEn ? 'Time constants for denominator (Td)' : 'Casove konstanty pro jmenovatel (Td)',
-    removeNum: isEn ? 'Remove numerator term' : 'Odstranit clen citatele',
-    removeDen: isEn ? 'Remove denominator term' : 'Odstranit clen jmenovatele',
-    addTerm: isEn ? '+ Add term' : '+ Pridat clen',
-    differentiator: isEn ? 'Differentiator (s^m)' : 'Diferenciator (s^m)',
-    integrator: isEn ? 'Integrator (s^r)' : 'Integrator (s^r)',
-    add: isEn ? 'Add' : 'Pridat',
+      : 'Při použití komplexních členů zadávej i sdružené dvojice, aby výsledný polynom byl reálný.',
+    tfInfoLine4b: isEn ? 'Example:' : 'Příklad:',
+    staticGain: isEn ? 'Static gain (K)' : 'Statické zesílení (K)',
+    delay: isEn ? 'Transport delay (L)' : 'Dopravní zpoždění (L)',
+    numeratorTau: isEn ? 'Time constants for numerator (Tn)' : 'Časové konstanty pro čitatel (Tn)',
+    denominatorTau: isEn ? 'Time constants for denominator (Td)' : 'Časové konstanty pro jmenovatel (Td)',
+    removeNum: isEn ? 'Remove numerator term' : 'Odstranit člen čitatele',
+    removeDen: isEn ? 'Remove denominator term' : 'Odstranit člen jmenovatele',
+    addTerm: isEn ? '+ Add term' : '+ Přidat člen',
+    differentiator: isEn ? 'Differentiator (s^m)' : 'Diferenciátor (s^m)',
+    integrator: isEn ? 'Integrator (s^r)' : 'Integrátor (s^r)',
+    add: isEn ? 'Add' : 'Přidat',
     remove: isEn ? 'Remove' : 'Odebrat',
-    scenarioTitle: isEn ? 'Simulation scenario and constant disturbance' : 'Simulacni scenar a konstantni porucha',
+    scenarioTitle: isEn ? 'Simulation scenario and constant disturbance' : 'Simulační scénář a konstantní porucha',
     scenarioAria: isEn ? 'Simulation information' : 'Informace o simulaci',
     scenarioInfoTitle: isEn ? 'Simulation structure' : 'Struktura simulace',
-    timePoints: isEn ? 'Time points (t1 to t7):' : 'Casove body (t1 az t7):',
-    timeline: isEn ? 'Timeline:' : 'Prubeh v case:',
-    distTitle: isEn ? 'Constant disturbance (td, d):' : 'Konstantni porucha (td, d):',
+    timePoints: isEn ? 'Time points (t1 to t7):' : 'Časové body (t1 až t7):',
+    timeline: isEn ? 'Timeline:' : 'Průběh v čase:',
+    distTitle: isEn ? 'Constant disturbance (td, d):' : 'Konstantní porucha (td, d):',
     note: isEn
       ? 'Note: quality metrics (overshoot, IAE, ITAE) are computed from the first step at time t1.'
-      : 'Pozn.: metriky kvality (prekmit, IAE, ITAE) se pocitaji z prvniho skoku v case t1.',
-    disturbanceSetup: isEn ? 'Constant disturbance setup (td)' : 'Nastaveni konstantni poruchy (td)',
-    tdLabel: isEn ? 'Time (td)' : 'Cas (td)',
+      : 'Pozn.: metriky kvality (překmit, IAE, ITAE) se počítají z prvního skoku v čase t1.',
+    disturbanceSetup: isEn ? 'Constant disturbance setup (td)' : 'Nastavení konstantní poruchy (td)',
+    tdLabel: isEn ? 'Time (td)' : 'Čas (td)',
     dLabel: isEn ? 'Magnitude (d)' : 'Velikost (d)',
-    submit: isEn ? 'Analyze and compute' : 'Analyzovat a vypocitat',
+    submit: isEn ? 'Analyze and compute' : 'Analyzovat a vypočítat',
     serverError: isEn ? 'Server error' : 'Chyba serveru',
   };
 
@@ -434,8 +434,8 @@ function TransferFunctionInput({
                         </>
                       ) : (
                         <>
-                          t1 az t6 jsou volitelne body pro skoky a rampy zadane hodnoty.{' '}
-                          <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>t7 je povinny</span>, urcuje celkovou delku simulace.
+                          t1 až t6 jsou volitelné body pro skoky a rampy zadané hodnoty.{' '}
+                          <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>t7 je povinný</span>, určuje celkovou délku simulace.
                         </>
                       )}
                     </div>
@@ -452,9 +452,9 @@ function TransferFunctionInput({
                     <div>0 - t1: w = w1</div>
                     <div>t1 - t2: w = w2</div>
                     <div>t2 - t3: w = w1</div>
-                    <div>{isEn ? 't3 - t4: linear ramp from w1 to w2' : 't3 - t4: linearni rampa z w1 na w2'}</div>
+                    <div>{isEn ? 't3 - t4: linear ramp from w1 to w2' : 't3 - t4: lineární rampa z w1 na w2'}</div>
                     <div>t4 - t5: w = w2</div>
-                    <div>{isEn ? 't5 - t6: linear ramp from w2 to w1' : 't5 - t6: linearni rampa z w2 na w1'}</div>
+                    <div>{isEn ? 't5 - t6: linear ramp from w2 to w1' : 't5 - t6: lineární rampa z w2 na w1'}</div>
                     <div>{isEn ? 'from t6 to t7: w = w1' : 'od t6 do t7: w = w1'}</div>
                   </section>
 
@@ -462,14 +462,14 @@ function TransferFunctionInput({
                     <span className={`font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
                       {isEn ? 'Amplitudes (w1, w2):' : 'Amplitudy (w1, w2):'}
                     </span>{' '}
-                    {isEn ? 'define setpoint levels.' : 'urcuji urovne zadane hodnoty.'}
+                    {isEn ? 'define setpoint levels.' : 'určují úrovně zadané hodnoty.'}
                   </section>
 
                   <section>
                     <span className={`font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                      {isEn ? 'Initial value (y0):' : 'Pocatecni hodnota (y0):'}
+                      {isEn ? 'Initial value (y0):' : 'Počáteční hodnota (y0):'}
                     </span>{' '}
-                    {isEn ? 'system output at time t = 0.' : 'vystup systemu v case t = 0.'}
+                    {isEn ? 'system output at time t = 0.' : 'výstup systému v čase t = 0.'}
                   </section>
 
                   <section
@@ -482,13 +482,13 @@ function TransferFunctionInput({
                     </span>
                     <div>
                       <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>td:</span>{' '}
-                      {isEn ? 'instant when disturbance starts adding to the control signal.' : 'okamzik, kdy se porucha zacne pricitat k akcni velicine.'}
+                      {isEn ? 'instant when disturbance starts adding to the control signal.' : 'okamžik, kdy se porucha začne přičítat k akční veličině.'}
                     </div>
                     <div>
                       <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>d:</span>{' '}
                       {isEn
                         ? 'constant disturbance magnitude from td until simulation end.'
-                        : 'velikost konstantni poruchy od zadaneho casu az do konce simulace.'}
+                        : 'velikost konstantní poruchy od zadaného času až do konce simulace.'}
                     </div>
                   </section>
 

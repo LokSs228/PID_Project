@@ -6,7 +6,7 @@ function PidTable({ data, theme, lang = 'cz' }) {
   const isEn = lang === 'en';
 
   const regulatorTypes = ['P', 'PI', 'PD', 'PID'];
-  const headers = [isEn ? 'Controller' : 'Typ regulatoru', 'Kp', 'Ki', 'Kd'];
+  const headers = [isEn ? 'Controller' : 'Typ regulátoru', 'Kp', 'Ki', 'Kd'];
 
   const formatValue = (val) => (val != null && typeof val === 'number' ? val.toFixed(4) : '-');
 

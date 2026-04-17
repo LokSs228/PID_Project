@@ -25,7 +25,7 @@ function Sim({ sim_points, y0, theme, lang = 'cz' }) {
   const data = {
     datasets: [
       {
-        label: isEn ? 'Setpoint (w)' : 'Pozadovana hodnota (w)',
+        label: isEn ? 'Setpoint (w)' : 'Požadovaná hodnota (w)',
         data: wData,
         borderColor: '#94a3b8',
         borderDash: [5, 5],
@@ -33,7 +33,7 @@ function Sim({ sim_points, y0, theme, lang = 'cz' }) {
         pointRadius: 0,
       },
       {
-        label: isEn ? 'Plant output (y)' : 'Vystup systemu (y)',
+        label: isEn ? 'Plant output (y)' : 'Výstup systému (y)',
         data: yData,
         borderColor: '#22d3ee',
         backgroundColor: 'rgba(34, 211, 238, 0.12)',
@@ -43,7 +43,7 @@ function Sim({ sim_points, y0, theme, lang = 'cz' }) {
         tension: 0.12,
       },
       {
-        label: isEn ? 'Control input (u)' : 'Ridici vstup (u)',
+        label: isEn ? 'Control input (u)' : 'Řídicí vstup (u)',
         data: uData,
         borderColor: '#34d399',
         borderWidth: 1.6,
@@ -51,7 +51,7 @@ function Sim({ sim_points, y0, theme, lang = 'cz' }) {
         yAxisID: 'y1',
       },
       {
-        label: isEn ? 'Initial point (y0)' : 'Pocatecni bod (y0)',
+        label: isEn ? 'Initial point (y0)' : 'Počáteční bod (y0)',
         data: [{ x: Number(sim_points[0].t), y: Number(y0) }],
         borderColor: '#f43f5e',
         backgroundColor: '#f43f5e',
@@ -90,7 +90,7 @@ function Sim({ sim_points, y0, theme, lang = 'cz' }) {
     scales: {
       x: {
         type: 'linear',
-        title: { display: true, text: isEn ? 'Time [s]' : 'Cas [s]', color: isDark ? '#94a3b8' : '#475569' },
+        title: { display: true, text: isEn ? 'Time [s]' : 'Čas [s]', color: isDark ? '#94a3b8' : '#475569' },
         grid: { color: 'rgba(71, 85, 105, 0.35)', drawBorder: false },
         ticks: { color: isDark ? '#94a3b8' : '#64748b' },
       },
@@ -104,7 +104,7 @@ function Sim({ sim_points, y0, theme, lang = 'cz' }) {
       y1: {
         type: 'linear',
         position: 'right',
-        title: { display: true, text: isEn ? 'Control input (u)' : 'Ridici vstup (u)', color: '#34d399' },
+        title: { display: true, text: isEn ? 'Control input (u)' : 'Řídicí vstup (u)', color: '#34d399' },
         grid: { drawOnChartArea: false },
         ticks: { color: '#34d399' },
       },

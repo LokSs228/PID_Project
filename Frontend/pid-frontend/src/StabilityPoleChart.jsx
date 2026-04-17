@@ -141,11 +141,11 @@ function StabilityPoleChart({ variant, poles, theme, lang = 'cz' }) {
       }
     : {
     zBoundary: '|z| = 1',
-    zInside: 'Stabilni poly |z| < 1',
-    zOutside: 'Nestabilni poly |z| >= 1',
+    zInside: 'Stabilní póly |z| < 1',
+    zOutside: 'Nestabilní póly |z| >= 1',
     sBoundary: 'Re = 0',
-    sInside: 'Stabilni poly Re < 0',
-    sOutside: 'Nestabilni poly Re >= 0',
+    sInside: 'Stabilní póly Re < 0',
+    sOutside: 'Nestabilní póly Re >= 0',
     re: 'Re',
     im: 'Im',
     absZ: '|z|',

@@ -8,15 +8,15 @@ function MetricsTable({ metrics, theme, lang = 'cz' }) {
   const { overshoot, settlingTime, settlingStatus, IAE, ITAE } = metrics;
 
   const rows = [
-    { key: 'overshoot', label: isEn ? 'Overshoot 5% [%]' : 'Prekmit 5% [%]', value: overshoot },
-    { key: 'settling', label: isEn ? 'Settling time [s]' : 'Doba ustaleni [s]', value: settlingTime },
+    { key: 'overshoot', label: isEn ? 'Overshoot 5% [%]' : 'Překmit 5% [%]', value: overshoot },
+    { key: 'settling', label: isEn ? 'Settling time [s]' : 'Doba ustálení [s]', value: settlingTime },
     { key: 'iae', label: 'IAE [s]', value: IAE },
     { key: 'itae', label: isEn ? 'ITAE [s^2]' : 'ITAE [s^2]', value: ITAE },
   ];
 
   const formatRowValue = (row) => {
     if (row.key === 'settling' && settlingStatus === 'unstable_or_not_settled') {
-      return isEn ? 'System is unstable / not settled' : 'System je nestabilni / neustaleny';
+      return isEn ? 'System is unstable / not settled' : 'Systém je nestabilní / neustálený';
     }
     if (row.value === undefined || row.value === null) {
       return '-';
@@ -34,7 +34,7 @@ function MetricsTable({ metrics, theme, lang = 'cz' }) {
         className={`border-b px-4 py-3 ${isDark ? 'border-slate-700/60 bg-slate-800/70' : 'border-slate-200 bg-slate-100'}`}
       >
         <h3 className={`text-sm font-semibold uppercase tracking-[0.1em] ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-          {isEn ? 'Final metrics' : 'Vysledne metriky'}
+          {isEn ? 'Final metrics' : 'Výsledné metriky'}
         </h3>
       </div>
 

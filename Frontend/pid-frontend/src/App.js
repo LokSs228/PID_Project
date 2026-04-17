@@ -97,31 +97,31 @@ function App() {
     () => [
       {
         value: 'CHR_0_POZ_H',
-        label: isEn ? '0% overshoot, setpoint tracking' : '0% prekmit, pozadovana hodnota',
+        label: isEn ? '0% overshoot, setpoint tracking' : '0% překmit, požadovaná hodnota',
       },
       {
         value: 'CHR_0_POT_P',
-        label: isEn ? '0% overshoot, disturbance rejection' : '0% prekmit, potlaceni poruchy',
+        label: isEn ? '0% overshoot, disturbance rejection' : '0% překmit, potlačení poruchy',
       },
       {
         value: 'CHR_20_POZ_H',
-        label: isEn ? '20% overshoot, setpoint tracking' : '20% prekmit, pozadovana hodnota',
+        label: isEn ? '20% overshoot, setpoint tracking' : '20% překmit, požadovaná hodnota',
       },
       {
         value: 'CHR_20_POT_P',
-        label: isEn ? '20% overshoot, disturbance rejection' : '20% prekmit, potlaceni poruchy',
+        label: isEn ? '20% overshoot, disturbance rejection' : '20% překmit, potlačení poruchy',
       },
     ],
     [isEn]
   );
 
   const t = {
-    lightMode: isEn ? 'Light mode' : 'Svetly rezim',
-    darkMode: isEn ? 'Dark mode' : 'Tmavy rezim',
-    calcSetup: isEn ? 'Calculation setup' : 'Nastaveni vypoctu',
-    tuningMethod: isEn ? 'Tuning method' : 'Metoda ladeni',
-    ga: isEn ? 'Genetic algorithm' : 'Geneticky algoritmus',
-    controllerType: isEn ? 'Controller type' : 'Typ regulatoru',
+    lightMode: isEn ? 'Light mode' : 'Světlý režim',
+    darkMode: isEn ? 'Dark mode' : 'Tmavý režim',
+    calcSetup: isEn ? 'Calculation setup' : 'Nastavení výpočtu',
+    tuningMethod: isEn ? 'Tuning method' : 'Metoda ladění',
+    ga: isEn ? 'Genetic algorithm' : 'Genetický algoritmus',
+    controllerType: isEn ? 'Controller type' : 'Typ regulátoru',
     generations: isEn ? 'Generations' : 'Generace',
     populationSize: isEn ? 'Population size' : 'Velikost populace',
     mutation: isEn ? 'Mutation' : 'Mutace',
@@ -129,23 +129,23 @@ function App() {
     lambdaFormula: isEn ? 'Lambda = a x L or a x T' : 'Lambda = a x L nebo a x T',
     modelSection: isEn
       ? 'Plant model identification G(s), simulation scenario setup, and constant disturbance'
-      : 'Identifikace modelu G(s), nastaveni simulacniho scenare a konstantni poruchy',
-    loading: isEn ? 'Loading results...' : 'Nacitani vysledku...',
-    computedGains: isEn ? 'Computed coefficients' : 'Vypoctene koeficienty',
-    stepResponse: isEn ? 'System step response' : 'Prechodova charakteristika systemu',
+      : 'Identifikace modelu G(s), nastavení simulačního scénáře a konstantní poruchy',
+    loading: isEn ? 'Loading results...' : 'Načítání výsledků...',
+    computedGains: isEn ? 'Computed coefficients' : 'Vypočtené koeficienty',
+    stepResponse: isEn ? 'System step response' : 'Přechodová charakteristika systému',
     simTitle: isEn
       ? 'Control loop simulation with PID controller'
-      : 'Simulace regulacniho pochodu s PID regulatorem',
+      : 'Simulace regulačního pochodu s PID regulátorem',
     quality: isEn ? 'Control quality' : 'Kvalita regulace',
     m1: isEn
       ? 'Overshoot 5% [%]: how much the output exceeds the setpoint after a step.'
-      : 'Prekmit 5% [%]: jak moc vystup prekroci pozadovanou hodnotu po skoku.',
+      : 'Překmit 5% [%]: jak moc výstup překročí požadovanou hodnotu po skoku.',
     m2: isEn
       ? 'Settling time [s]: time after which the output remains within the tolerance band around the target.'
-      : 'Doba ustaleni [s]: cas, za ktery vystup zustane v tolerancnim pasmu kolem cile.',
+      : 'Doba ustálení [s]: čas, za který výstup zůstane v tolerančním pásmu kolem cíle.',
     m3: isEn
       ? 'IAE and ITAE describe total control error. Lower values indicate better tuning.'
-      : 'IAE a ITAE charakterizuji celkovou regulacni chybu. Cim nizsi hodnota, tim kvalitnejsi nastaveni.',
+      : 'IAE a ITAE charakterizují celkovou regulační chybu. Čím nižší hodnota, tím kvalitnější nastavení.',
   };
 
   return (
