@@ -106,7 +106,7 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
   };
 
   return (
-    <div className="h-full min-h-[340px] w-full overflow-hidden">
+    <div className="flex h-full min-h-[340px] w-full flex-col overflow-hidden">
       {showApproxParams && (
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
           <div
@@ -139,7 +139,9 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
           </div>
         </div>
       )}
-      <Line data={data} options={options} />
+      <div className="min-h-0 flex-1">
+        <Line data={data} options={options} />
+      </div>
     </div>
   );
 }
