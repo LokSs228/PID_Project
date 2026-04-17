@@ -25,13 +25,23 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
 
   const formatParam = (val) => (Number.isFinite(val) ? val.toFixed(4) : '-');
 
-  if (pointArray.length === 0) return null;
+  const toXYPoint = (p, idx) => {
+    const x = Number(p?.t ?? p?.time ?? p?.x ?? idx);
+    const y = Number(p?.y ?? p?.value);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x, y };
+  };
+
+  const measuredData = pointArray.map(toXYPoint).filter(Boolean);
+  const approxData = aproArray.map(toXYPoint).filter(Boolean);
+
+  if (measuredData.length === 0) return null;
 
   const data = {
     datasets: [
       {
         label: isEn ? 'Measured response y(t)' : 'Reálná odezva y(t)',
-        data: pointArray.map((p) => ({ x: p.t, y: p.y })),
+        data: measuredData,
         borderColor: '#38bdf8',
         backgroundColor: 'rgba(56, 189, 248, 0.12)',
         fill: true,
@@ -39,9 +49,9 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
         pointRadius: 0,
         borderWidth: 2.5,
       },
-      aproArray.length > 0 && {
+      approxData.length > 0 && {
         label: isEn ? 'FOPDT approximation' : 'Aproximovaná FOPDT odezva',
-        data: aproArray.map((p) => ({ x: p.t, y: p.y })),
+        data: approxData,
         borderColor: '#f59e0b',
         backgroundColor: 'transparent',
         fill: false,
@@ -78,6 +88,19 @@ function Step({ points, approxModel, theme, lang = 'cz' }) {
         bodyColor: isDark ? '#cbd5e1' : '#334155',
         borderColor: isDark ? '#334155' : '#cbd5e1',
         borderWidth: 1,
+        callbacks: {
+          title(items) {
+            if (!items || items.length === 0) return '';
+            const x = items[0].parsed?.x;
+            if (!Number.isFinite(x)) return '';
+            return `${isEn ? 'Time' : 'Čas'}: ${Number(x).toFixed(4)} s`;
+          },
+          label(ctx) {
+            const y = ctx.parsed?.y;
+            if (!Number.isFinite(y)) return ctx.dataset.label || '';
+            return `${ctx.dataset.label}: ${Number(y).toFixed(4)}`;
+          },
+        },
       },
     },
     scales: {
