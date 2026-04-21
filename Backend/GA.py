@@ -53,7 +53,7 @@ def genetic_algorithm(
     if sample_window <= 0:
         raise ValueError("Parameter t7 must be > 0.")
 
-    sample_time = sample_window / 1500.0
+    sample_time = sample_window / 7500.0
     time_grid = np.arange(0.0, simulation_end_time - sample_time, sample_time, dtype=float)
     if time_grid.size < 2:
         raise ValueError("Not enough simulation samples for genetic algorithm.")

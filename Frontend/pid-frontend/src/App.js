@@ -60,12 +60,13 @@ function App() {
     setMetrics(
       showSimAndMetrics && result.overshoot !== undefined
         ? {
-            overshoot: result.overshoot,
-            settlingTime: result.settlingtime,
-            settlingStatus: result.settling_status,
-            IAE: result.IAE,
-            ITAE: result.ITAE,
-          }
+          overshoot: result.overshoot,
+          settlingTime: result.settlingtime,
+          settlingStatus: result.settling_status,
+          IAE: result.IAE,
+          ITAE: result.ITAE,
+          stabilityMargins: result.stability_margins || null,
+        }
         : null
     );
   };
@@ -79,19 +80,16 @@ function App() {
     localStorage.setItem('pid_lang', lang);
   }, [lang]);
 
-  const panelClass = `rounded-2xl p-4 sm:p-6 ${
-    isDark
+  const panelClass = `rounded-2xl p-4 sm:p-6 ${isDark
       ? 'border border-slate-700/60 bg-slate-900/45 shadow-xl shadow-slate-950/30 backdrop-blur-sm'
       : 'border border-slate-200 bg-white shadow-lg shadow-slate-200/80'
-  }`;
-  const sectionLabel = `mb-3 block text-[12px] font-bold uppercase tracking-[0.08em] ${
-    isDark ? 'text-slate-400' : 'text-slate-600'
-  }`;
-  const selectClass = `block w-full rounded-xl p-3 text-[15px] transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 ${
-    isDark
+    }`;
+  const sectionLabel = `mb-3 block text-[12px] font-bold uppercase tracking-[0.08em] ${isDark ? 'text-slate-400' : 'text-slate-600'
+    }`;
+  const selectClass = `block w-full rounded-xl p-3 text-[15px] transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 ${isDark
       ? 'border border-slate-700/80 bg-slate-900/80 text-slate-100 hover:border-slate-500'
       : 'border border-slate-300 bg-white text-slate-900 hover:border-slate-400'
-  }`;
+    }`;
 
   const chrOptions = useMemo(
     () => [
@@ -137,22 +135,12 @@ function App() {
       ? 'Control loop simulation with PID controller'
       : 'Simulace regulačního pochodu s PID regulátorem',
     quality: isEn ? 'Control quality' : 'Kvalita regulace',
-    m1: isEn
-      ? 'Overshoot 5% [%]: how much the output exceeds the setpoint after a step.'
-      : 'Překmit 5% [%]: jak moc výstup překročí požadovanou hodnotu po skoku.',
-    m2: isEn
-      ? 'Settling time [s]: time after which the output remains within the tolerance band around the target.'
-      : 'Doba ustálení [s]: čas, za který výstup zůstane v tolerančním pásmu kolem cíle.',
-    m3: isEn
-      ? 'IAE and ITAE describe total control error. Lower values indicate better tuning.'
-      : 'IAE a ITAE charakterizují celkovou regulační chybu. Čím nižší hodnota, tím kvalitnější nastavení.',
   };
 
   return (
     <div
-      className={`relative min-h-screen overflow-x-hidden px-3 py-5 sm:px-6 sm:py-6 lg:px-8 ${
-        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
-      }`}
+      className={`relative min-h-screen overflow-x-hidden px-3 py-5 sm:px-6 sm:py-6 lg:px-8 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+        }`}
     >
       <div
         className={`pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full blur-3xl ${isDark ? 'bg-cyan-500/15' : 'bg-cyan-400/15'}`}
@@ -163,11 +151,10 @@ function App() {
 
       <div className="mx-auto max-w-[1600px] space-y-8">
         <header
-          className={`rounded-2xl p-6 ${
-            isDark
+          className={`rounded-2xl p-6 ${isDark
               ? 'border border-slate-800/80 bg-slate-900/65 shadow-lg shadow-black/20'
               : 'border border-slate-200 bg-white shadow-lg shadow-slate-200/80'
-          }`}
+            }`}
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -183,30 +170,28 @@ function App() {
                 <button
                   type="button"
                   onClick={() => setLang('cz')}
-                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
-                    lang === 'cz'
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${lang === 'cz'
                       ? isDark
                         ? 'bg-sky-500/25 text-sky-200'
                         : 'bg-sky-100 text-sky-800'
                       : isDark
                         ? 'text-slate-300 hover:text-sky-300'
                         : 'text-slate-600 hover:text-sky-700'
-                  }`}
+                    }`}
                 >
                   CZ
                 </button>
                 <button
                   type="button"
                   onClick={() => setLang('en')}
-                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${
-                    lang === 'en'
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition ${lang === 'en'
                       ? isDark
                         ? 'bg-sky-500/25 text-sky-200'
                         : 'bg-sky-100 text-sky-800'
                       : isDark
                         ? 'text-slate-300 hover:text-sky-300'
                         : 'text-slate-600 hover:text-sky-700'
-                  }`}
+                    }`}
                 >
                   EN
                 </button>
@@ -215,11 +200,10 @@ function App() {
               <button
                 type="button"
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                className={`rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition ${
-                  isDark
+                className={`rounded-xl border px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition ${isDark
                     ? 'border-slate-600 bg-slate-800 text-slate-200 hover:border-sky-400 hover:text-sky-300'
                     : 'border-slate-300 bg-white text-slate-700 hover:border-sky-500 hover:text-sky-700'
-                }`}
+                  }`}
               >
                 {isDark ? t.lightMode : t.darkMode}
               </button>
@@ -405,15 +389,6 @@ function App() {
                 <section className={`${panelClass} lg:col-span-3`}>
                   <h2 className={sectionLabel}>{t.quality}</h2>
                   {metrics && <MetricsTable metrics={metrics} theme={theme} lang={lang} />}
-                  <div
-                    className={`mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-[13px] leading-relaxed ${
-                      isDark ? 'text-slate-300' : 'text-slate-700'
-                    }`}
-                  >
-                    <p>{t.m1}</p>
-                    <p className="mt-1">{t.m2}</p>
-                    <p className="mt-1">{t.m3}</p>
-                  </div>
                 </section>
               </div>
             )}
@@ -425,3 +400,4 @@ function App() {
 }
 
 export default App;
+

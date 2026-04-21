@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-from control import pade, poles, step_response, tf
+from control import margin, pade, poles, step_response, tf
 from flask import Flask, jsonify, request
 
 from apro_FOPDT import apro_FOPDT
@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 TAU_EPS = 1e-9
 SAMPLES_PER_TAU = 30.0
-PLOT_POINT_STRIDE = 30
+PLOT_POINT_STRIDE = 15
 
 
 def normalize_origin(origin):
@@ -210,6 +210,61 @@ def downsample_sim_points_for_plot(points, stride=PLOT_POINT_STRIDE):
         sampled_points.append(point_list[-1])
 
     return sampled_points
+
+
+def build_controller_tf(kp, ki, kd):
+    controller = tf([float(kp)], [1.0])
+
+    if abs(float(ki)) > TAU_EPS:
+        controller += tf([float(ki)], [1.0, 0.0])
+
+    if abs(float(kd)) > TAU_EPS:
+        controller += tf([float(kd), 0.0], [1.0])
+
+    return controller
+
+
+def _extract_margin_value(value):
+    try:
+        scalar = float(np.asarray(value, dtype=float).reshape(-1)[0])
+    except Exception:
+        return None, False
+
+    if np.isnan(scalar):
+        return None, False
+    if np.isposinf(scalar):
+        return None, True
+    if not np.isfinite(scalar):
+        return None, False
+
+    return scalar, False
+
+
+def compute_stability_margins(plant, kp, ki, kd):
+    try:
+        loop_tf = build_controller_tf(kp, ki, kd) * plant
+        gain_margin, phase_margin, _, _ = margin(loop_tf)
+    except Exception:
+        return {
+            "gain_margin_db": None,
+            "gain_margin_infinite": False,
+            "phase_margin_deg": None,
+            "phase_margin_infinite": False,
+        }
+
+    gain_margin_factor, gain_margin_infinite = _extract_margin_value(gain_margin)
+    phase_margin_deg, phase_margin_infinite = _extract_margin_value(phase_margin)
+
+    gain_margin_db = None
+    if gain_margin_factor is not None and gain_margin_factor > 0:
+        gain_margin_db = float(20.0 * np.log10(gain_margin_factor))
+
+    return {
+        "gain_margin_db": gain_margin_db,
+        "gain_margin_infinite": bool(gain_margin_infinite),
+        "phase_margin_deg": phase_margin_deg,
+        "phase_margin_infinite": bool(phase_margin_infinite),
+    }
 
 
 @app.route("/calculate", methods=["POST", "OPTIONS"])
@@ -410,6 +465,7 @@ def calculate():
         pd_kp,
         pd_kd,
     )
+    stability_margins = compute_stability_margins(system, kp, ki, kd)
 
     try:
         simulation_horizon = float(time_params[6])
@@ -462,6 +518,7 @@ def calculate():
         "y0": initial_output,
         "closed_loop_stable": closed_loop_stable,
         "stability": stability_report,
+        "stability_margins": stability_margins,
         "sim_points": sim_points,
         "sim_points_total": sim_points_total,
         "sim_points_plot": len(sim_points),
