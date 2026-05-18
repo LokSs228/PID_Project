@@ -299,8 +299,8 @@ def calculate():
     if len(time_params) < 11:
         return jsonify({"error": "Not enough timeParams values."}), 400
 
-    if process_gain_raw is None or not denominator_time_constants_raw:
-        return jsonify({"error": "Missing required inputs K or T_den."}), 400
+    if process_gain_raw is None:
+        return jsonify({"error": "Missing required input K."}), 400
 
     try:
         process_gain = parse_real(process_gain_raw, "K")
@@ -311,6 +311,9 @@ def calculate():
         integrator_order = parse_nonneg_int(integrator_order_raw, "intOrder")
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    if not denominator_time_constants and derivative_order == 0 and integrator_order == 0:
+        return jsonify({"error": "Provide T_den or set diffOrder/intOrder for s^m and/or 1/s^r terms."}), 400
 
     model_order = len(denominator_time_constants)
 

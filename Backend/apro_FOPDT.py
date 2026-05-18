@@ -7,7 +7,7 @@ FOPDT_CACHE_MAX = 256
 fopdt_cache = OrderedDict()
 fopdt_cache_lock = Lock()
 L_ZERO_THRESHOLD_SAMPLES = 0.5
-FOPDT_ULTRA_VERSION = 6
+FOPDT_ULTRA_VERSION = 8
 
 
 def _coeff_signature(polynomial, ndigits=12):
@@ -24,7 +24,6 @@ def _coeff_signature(polynomial, ndigits=12):
 
 
 def _system_signature(system):
-    """Генерирует сигнатуру (хеш) системы для ключа кэша."""
     try:
         if isinstance(system, tuple):
             return hash(str([arr.shape for arr in system if hasattr(arr, 'shape')]))
@@ -52,11 +51,6 @@ def _cache_set(cache_key, value):
 
 
 def get_step_response(system):
-    """
-    Извлекает массивы времени и выхода.
-    Адаптировано для работы 'из коробки', если передать кортеж (time, output)
-    Или использует control.step_response для передаточных функций.
-    """
     if isinstance(system, tuple) and len(system) == 2:
         return system[0], system[1]
     
@@ -64,18 +58,11 @@ def get_step_response(system):
 
 
 def _run_rls(output_values, input_values, delay_samples):
-    """
-    Полноценная реализация рекурсивного метода наименьших квадратов (RLS) для ARX.
-    Модель: y(t) = -a1*y(t-1) + b1*u(t-1-d) + b2*u(t-2-d)
-    """
     N = len(output_values)
     if N < 3 + delay_samples:
         return None, None
-
-    # Инициализация параметров RLS
     theta = np.zeros((3, 1))
     P = np.eye(3) * 1e6
-
     y = np.asarray(output_values).reshape(-1, 1)
     u = np.asarray(input_values).reshape(-1, 1)
 
@@ -85,8 +72,7 @@ def _run_rls(output_values, input_values, delay_samples):
             [u[t-1-delay_samples, 0]],
             [u[t-2-delay_samples, 0]]
         ])
-        
-        # Обновление RLS
+
         K_gain = (P @ phi) / (1.0 + phi.T @ P @ phi)
         theta = theta + K_gain @ (y[t, 0] - phi.T @ theta)
         P = (np.eye(3) - K_gain @ phi.T) @ P
@@ -95,7 +81,6 @@ def _run_rls(output_values, input_values, delay_samples):
 
 
 def _fopdt_step_response(time_values, K, T, L):
-    """Генерирует step response для модели FOPDT для расчета MSE."""
     time_values = np.asarray(time_values, dtype=float)
     y = np.zeros_like(time_values)
     idx = time_values >= L

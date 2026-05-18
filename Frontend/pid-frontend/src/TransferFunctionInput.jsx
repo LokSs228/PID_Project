@@ -71,7 +71,7 @@ function TransferFunctionInput({
     integrator: isEn ? 'Integrator (s^r)' : 'Integrátor (s^r)',
     add: isEn ? 'Add' : 'Přidat',
     remove: isEn ? 'Remove' : 'Odebrat',
-    scenarioTitle: isEn ? 'Simulation scenario and constant disturbance' : 'Simulační scénář a konstantní porucha',
+    scenarioTitle: isEn ? 'Simulation scenario and constant disturbance' : 'Nastavení žádané veličiny a konstantní vstupní poruchy',
     scenarioAria: isEn ? 'Simulation information' : 'Informace o simulaci',
     scenarioInfoTitle: isEn ? 'Simulation structure' : 'Struktura simulace',
     timePoints: isEn ? 'Time points (t1 to t7):' : 'Časové body (t1 až t7):',
@@ -158,7 +158,7 @@ function TransferFunctionInput({
   };
 
   const renderLatex = () => {
-    if (K === '' || T_den.some((item) => item === '')) return '\\text{G(s) = ...}';
+    if (K === '') return '\\text{G(s) = ...}';
 
     const formatCoeff = (val) => {
       const text = String(val).trim().replace(/j/gi, 'i');
@@ -411,7 +411,7 @@ function TransferFunctionInput({
               </button>
 
               <div
-                className={`invisible absolute left-0 top-6 z-50 w-[min(16rem,calc(100vw-2rem))] rounded-xl p-4 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 max-h-[46vh] overflow-y-auto ${
+                className={`invisible absolute top-6 z-50 w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 left-1/2 rounded-xl p-4 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 max-h-[46vh] overflow-y-auto sm:left-auto sm:right-0 sm:w-[min(16rem,calc(100vw-2rem))] sm:translate-x-0 ${
                   isDark ? 'border border-slate-700 bg-slate-800' : 'border border-slate-300 bg-white'
                 }`}
               >
@@ -434,7 +434,7 @@ function TransferFunctionInput({
                         </>
                       ) : (
                         <>
-                          t1 až t6 jsou volitelné body pro skoky a rampy zadané hodnoty.{' '}
+                          t1 až t6 jsou volitelné body pro skoky a rampy žádané hodnoty.{' '}
                           <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>t7 je povinný</span>, určuje celkovou délku simulace.
                         </>
                       )}
@@ -462,7 +462,7 @@ function TransferFunctionInput({
                     <span className={`font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
                       {isEn ? 'Amplitudes (w1, w2):' : 'Amplitudy (w1, w2):'}
                     </span>{' '}
-                    {isEn ? 'define setpoint levels.' : 'určují úrovně zadané hodnoty.'}
+                    {isEn ? 'define setpoint levels.' : 'určují úrovně žádané hodnoty.'}
                   </section>
 
                   <section>
